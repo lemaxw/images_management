@@ -1,0 +1,17 @@
+version: '3.1'
+
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: admin 
+      POSTGRES_USER: admin
+      POSTGRES_DB: russian_poetry
+
+volumes:
+  postgres_data:
