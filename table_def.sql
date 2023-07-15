@@ -1,5 +1,6 @@
+DROP TABLE IF EXISTS poems;
 CREATE TABLE poems (
-        id INT PRIMARY KEY,
+        id TEXT PRIMARY KEY,
         text TEXT,
         entity TEXT,
         translation TEXT,

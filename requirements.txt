@@ -1,0 +1,10 @@
+googletrans==4.0.0-rc1
+pyrogram
+openai
+TgCrypto
+psycopg2-binary
+python-dateutil
+-r clip_requirements.txt
+python-dotenv
+aiogram
+asyncio

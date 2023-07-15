@@ -1,9 +1,2 @@
-1. finalize postgres initialization (connect to the db)
-2. fill the db from telegram using the solution from chatgpt
-   a. read from telegram
-   b. translate to english
-   c. transform to the summary of 77 chars using chatgpt solution
-   d. store in the db, original text, the translation, the summary, the last published date, the rating from telegram, author etc
-   e. when transforming, pay attention on billing, probably need make it in batches of 100
-3. once it's done, write layer prog which will read from the db, oriented to the last published date and provide texts to CLIP
-4. clip should select most matchable item and then based on the data, need publish to telegram!!
+1. add modify date to read recent published and update existing in db
+2. add backup db and keep it published to git
