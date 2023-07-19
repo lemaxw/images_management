@@ -2,11 +2,10 @@ from pyrogram import Client
 from google_translator import translate_word
 from openai_extract_entity import extract_entity
 from db_upsert_entity import add_entry, is_id_exist
-
+from utils import hash_alpha_chars, remove_numbers_from_end
 from dotenv import load_dotenv
 
 import os
-import hashlib
 import re
 # load the environment variables from the .env file
 load_dotenv()
@@ -14,13 +13,6 @@ load_dotenv()
 api_id = os.getenv('TELEGRAM_API_ID')
 api_hash = os.getenv('TELEGRAM_API_HASH')
 channel_id = '@daypicture'  # The id or username of the channel from where to download photos
-
-def hash_alpha_chars(s):
-    # Remove non-alphabet characters
-    s = ''.join(c for c in s if c.isalpha())
-    # Compute SHA-1 hash
-    sha1 = hashlib.sha1(s.encode()).hexdigest()
-    return sha1
 
 def remove_2_last_lines(text):
     # Split the text into lines
@@ -48,10 +40,6 @@ def countReactions(reactions):
         for reaction in reactions:
             total_reactions += reaction.count
         return total_reactions
-
-
-def remove_numbers_from_end(string):
-    return re.sub(r'\d+$', '', string)
 
 app = Client("my_account", api_id, api_hash)
 def download_message():
