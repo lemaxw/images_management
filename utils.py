@@ -17,3 +17,7 @@ def hash_alpha_chars(s):
 
 def remove_numbers_from_end(string):
     return re.sub(r'\d+$', '', string)
+
+
+def extract_author(string):
+    return string.split('–', 1)[0]

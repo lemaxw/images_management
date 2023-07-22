@@ -1,0 +1,6 @@
+from db_upsert_entity import update_entry
+
+ids = ['78a0cd2e49420ddb2ba7ac5dedad5d5f61c4cbec','b1bb2c131135e19cb9b44bf386bffbb65ba7436c','5707964b50d120064c3fb2cc9f8c0b88cacf0dd8','4c443a66509576e39b53108b17806fc4fac3d58b','1894e7c1703a3fa72814d9de105354f86f7248a','61e1d740a57e5a2dadd4473e1d1095220a2f4626','406ac584650e0d4c11c432e3be271bd41bb65b4f']
+
+
+update_entry(ids, 'ru')
