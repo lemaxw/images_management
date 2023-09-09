@@ -162,6 +162,7 @@ def update_entry(ids, dbname):
     try:
         for id in ids:
             cursor.execute(query, (now, id))
+            print(f"updated poem {id}, to {now}")
         
         # Commit changes to database
         conn.commit()
