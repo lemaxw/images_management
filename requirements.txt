@@ -9,3 +9,5 @@ python-dotenv
 aiogram
 asyncio
 beautifulsoup4
+transformers
+sentence-transformers
