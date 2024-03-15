@@ -1,13 +1,21 @@
 from db_upsert_entity import update_entry
 
 
+def read_file_to_blocks(filename):
+    with open(filename, 'r') as file:
+        content = file.read()
 
-ids = ['439d013bcce7f65bdde79db11da2bb3eef04a9f2','4c443a66509576e39b53108b17806fc4fac3d58b','3dcae598296b021fe9fe93f06cf935c994ae62ad','78a0cd2e49420ddb2ba7ac5dedad5d5f61c4cbec','82844ca943f85c26477857d0e9508ba712db480e','fba77b925f11481a7a076b187606de178a1b18b9','39d53f7cd907bd1dc41b881c541aa0c1624847b1']
-update_entry(ids, 'ru')
+    # Split the content by one or more newline characters to handle multiple empty lines as separators
+    blocks = content.strip().split("\n\n\n")
 
-ids = ['366cdcc72d643d8520aeb1b99c0208705077de10','1d32ee430c40fa8acf95cf45c426a1263212a529','f5cfc1abe92f7300514b3499a72d9ad060101529','aae73598f73c41980344c31f7c91df77c7ff811a','56a933398c108c8e70f41e18acc0e83cd6b94e22','97d6d6348a1478c881f1adf3baf1537ff73a189d','412975d35736167e094bb504f32c65b8ec5699fc']
-update_entry(ids, 'ua')
+    # Further split each block by newline to get arrays of strings
+    arrays_of_strings = [block.split("\n") for block in blocks]
 
+    return arrays_of_strings
 
+# Example usage
+filename = "guids_to_update.txt"  # Replace with your actual file path
+blocks_as_arrays = read_file_to_blocks(filename)
 
-
+update_entry(blocks_as_arrays[1], 'ru')
+update_entry(blocks_as_arrays[0], 'ua')

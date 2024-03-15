@@ -2,8 +2,10 @@ import asyncio
 from db_upsert_entity import get_poems
 from telegram_send_msg import send_telegram_message
 from sentences_comparator import get_similar_sentences
+from sentences_comparator import get_similar_sentences
+from google_translator import translate_word
 
-def publish_similarities(image, phrase, entities, poems):
+def publish_similarities(image, phrase, entities, poems, location):
     similarity_scores = get_similar_sentences(phrase, entities)
 
     # Pair statements with their corresponding similarity scores
@@ -16,13 +18,13 @@ def publish_similarities(image, phrase, entities, poems):
     count = 0
     # Print each pair on a new line
     for poem, similarity in sorted_statements:
-        if similarity <= 0.02 or count == 10:
+        if similarity <= 0.02 or count == 5:
             print(f"found {count} similar poems")
             break;
         else:
             count = count + 1
             print(f"{similarity:.2f}: {poem['entity']}")
-            asyncio.run(send_telegram_message(poem['author'],poem['text'],'replace',image_path,poem['link_to_source'],poem['id'],poem['entity'],poem['rating'], similarity))
+            asyncio.run(send_telegram_message(poem['author'],poem['text'],location,image,poem['link_to_source'],poem['id'],poem['entity'],poem['rating'], similarity))
 
 
 # List of potential texts
@@ -32,10 +34,25 @@ poems_ru =  get_poems('ru')
 entities_ru = [poem['entity'] for poem in poems_ru if 'entity' in poem]
 print(f"got {len(entities_ua)} entities for ua, {len(entities_ru)} entities for ru")
 
-phrase = "seller keeps set of collorful ballons over it"
-# Preprocess the image
-image_path = "/home/mpshater/images/_MG_0088.jpg"
-publish_similarities(image_path, phrase, entities_ua, poems_ua)
-publish_similarities(image_path, phrase, entities_ru, poems_ru)
+input_file = "/home/mpshater/images/input.txt"
+# Define the delimiter as a regular expression pattern
+delimiter = "|"
 
+# Open the file for reading
+with open(input_file, "r") as file:
+    
+    # Loop through each line in the file
+    for line in file:
+        
+        parts =  line.strip().split(delimiter)
+        
+        # Extract filename and statement
+        location = parts[0]
+        filename = parts[1]
+        statement = parts[2]
+        
+        # Print or do something with filename and statement
+        print(f"Filename: {filename}, Statement: {statement}")
 
+        publish_similarities(filename, statement, entities_ua, poems_ua, translate_word(location, 'uk'))
+        publish_similarities(filename, statement, entities_ru, poems_ru, translate_word(location, 'ru'))
