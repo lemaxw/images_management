@@ -1,0 +1,76 @@
+{
+    "containerDefinitions": [
+        {
+            "name": "telegram-bot",
+            "image": "212810157789.dkr.ecr.us-east-1.amazonaws.com/telegram-bot:0",
+            "cpu": 1024,
+            "portMappings": [
+                {
+                    "name": "telegram-bot-80-tcp",
+                    "containerPort": 80,
+                    "hostPort": 80,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "secrets": [
+                {
+                    "name": "TELEGRAM_API_HASH",
+                    "valueFrom": "arn:aws:ssm:us-east-1:212810157789:parameter/apps/telegram-bot/TELEGRAM_API_HASH"
+                },
+                {
+                    "name": "PHONE_NUMBER",
+                    "valueFrom": "arn:aws:ssm:us-east-1:212810157789:parameter/apps/telegram-bot/PHONE_NUMBER"
+                },
+                {
+                    "name": "TELEGRAM_API_ID",
+                    "valueFrom": "arn:aws:ssm:us-east-1:212810157789:parameter/apps/telegram-bot/TELEGRAM_API_ID"
+                },
+                {
+                    "name": "TELEGRAM_CHANNEL_DP_ID_RU",
+                    "valueFrom": "arn:aws:ssm:us-east-1:212810157789:parameter/apps/telegram-bot/TELEGRAM_CHANNEL_DP_ID_RU"
+                },
+                {
+                    "name": "TELEGRAM_CHANNEL_DP_ID_UA",
+                    "valueFrom": "arn:aws:ssm:us-east-1:212810157789:parameter/apps/telegram-bot/TELEGRAM_CHANNEL_DP_ID_UA"
+                }
+            ],
+            "readonlyRootFilesystem": false,
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": "/ecs/telegram-bot",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "telegram-bot",
+    "executionRoleArn": "arn:aws:iam::212810157789:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "2048",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "tags": [
+        {
+            "key": "apps",
+            "value": "telegram-bot"
+        }
+    ]
+}

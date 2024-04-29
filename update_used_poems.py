@@ -14,7 +14,7 @@ def read_file_to_blocks(filename):
     return arrays_of_strings
 
 # Example usage
-filename = "guids_to_update.txt"  # Replace with your actual file path
+filename = "/home/mpshater/images/guids_to_update.txt"  # Replace with your actual file path
 blocks_as_arrays = read_file_to_blocks(filename)
 
 update_entry(blocks_as_arrays[1], 'ru')

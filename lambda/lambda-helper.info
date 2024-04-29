@@ -1,0 +1,4 @@
+docker build -t lambda-pillow .
+docker create --name lambda-pillow-container lambda-pillow
+docker cp lambda-pillow-container:/tmp/lambda.zip .
+docker rm lambda-pillow-container

@@ -1,5 +1,6 @@
 import os
 import asyncio
+import warnings
 
 from dotenv import load_dotenv
 from aiogram import Bot, types
@@ -58,5 +59,7 @@ async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,enti
             else:
                 print(f"Network error: {str(e)}. Maximum retries exceeded.")
                 break
-
-    await bot.close()
+                
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        await bot.close()
