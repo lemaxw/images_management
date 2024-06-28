@@ -2,7 +2,6 @@ import asyncio
 from db_upsert_entity import get_poems
 from telegram_send_msg import send_telegram_message
 from sentences_comparator import get_similar_sentences
-from sentences_comparator import get_similar_sentences
 from google_translator import translate_word
 
 def publish_similarities(image, phrase, entities, poems, location):
@@ -32,6 +31,9 @@ poems_ua =  get_poems('ua')
 entities_ua = [poem['entity'] for poem in poems_ua if 'entity' in poem]
 poems_ru =  get_poems('ru')
 entities_ru = [poem['entity'] for poem in poems_ru if 'entity' in poem]
+poems_en =  get_poems('en')
+entities_en = [poem['entity'] for poem in poems_en if 'entity' in poem]
+
 print(f"got {len(entities_ua)} entities for ua, {len(entities_ru)} entities for ru")
 
 input_file = "/home/mpshater/images/input.txt"
@@ -56,3 +58,4 @@ with open(input_file, "r") as file:
 
         publish_similarities(filename, statement, entities_ua, poems_ua, translate_word(location, 'uk'))
         publish_similarities(filename, statement, entities_ru, poems_ru, translate_word(location, 'ru'))
+        publish_similarities(filename, statement, entities_en, poems_en, location)

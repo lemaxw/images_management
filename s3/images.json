@@ -1,0 +1,304 @@
+[
+    {
+        "eventDate": "2024-04-29",
+        "src": "images/20240429.jpg",
+        "thumb": "thumbnails/20240429.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240429_ru.txt",
+            "ua": "poems/20240429_ua.txt",
+            "ru_link": "https://stihi-russkih-poetov.ru/poems/ivan-alekseevich-bunin-dve-radugi",
+            "ua_link": "https://virshi.com.ua/pavlo-tychyna-vesna-z-baratynskogo/"
+        }
+    },
+    {
+        "eventDate": "2024-04-30",
+        "src": "images/20240430.jpg",
+        "thumb": "thumbnails/20240430.jpg",
+        "alt_ru": "\u041c\u0435\u0440\u0442\u0432\u043e\u0435 \u043c\u043e\u0440\u0435, \u0418\u0437\u0440\u0430\u0438\u043b\u044c",
+        "alt_ua": "\u041c\u0435\u0440\u0442\u0432\u0435 \u043c\u043e\u0440\u0435, \u0406\u0437\u0440\u0430\u0457\u043b\u044c",
+        "descriptions": {
+            "ru": "poems/20240430_ru.txt",
+            "ua": "poems/20240430_ua.txt",
+            "ru_link": "https://stihi-klassikov.ru/content/vid-gor-iz-stepey-kozlova",
+            "ua_link": "https://virshi.com.ua/myhajl-semenko-atlantida/"
+        }
+    },
+    {
+        "eventDate": "2024-05-01",
+        "src": "images/20240501.jpg",
+        "thumb": "thumbnails/20240501.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240501_ru.txt",
+            "ua": "poems/20240501_ua.txt",
+            "ru_link": "https://poemata.ru/poets/ivanov-georgiy/kak-tuman-na-rassvete/",
+            "ua_link": "https://virshi.com.ua/lesya-uaayinka-vechirnya-godyna/"
+        }
+    },
+    {
+        "eventDate": "2024-05-02",
+        "src": "images/20240502.jpg",
+        "thumb": "thumbnails/20240502.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240502_ru.txt",
+            "ua": "poems/20240502_ua.txt",
+            "ru_link": "https://poemata.ru/poets/vysotskiy-vladimir/belyy-vals/",
+            "ua_link": "https://virshi.com.ua/olena-teliga-sogodni-kozhnyj-krok-hotiv-buty-valsom/"
+        }
+    },
+    {
+        "eventDate": "2024-05-03",
+        "src": "images/20240503.jpg",
+        "thumb": "thumbnails/20240503.jpg",
+        "alt_ru": "\u0422\u0435\u043b\u044c -\u0410\u0432\u0438\u0432, \u0418\u0437\u0440\u0430\u0438\u043b\u044c",
+        "alt_ua": "\u0422\u0435\u043b\u044c -\u0410\u0432\u0456\u0432, \u0406\u0437\u0440\u0430\u0457\u043b\u044c",
+        "descriptions": {
+            "ru": "poems/20240503_ru.txt",
+            "ua": "poems/20240503_ua.txt",
+            "ru_link": "https://rustih.ru/dmitrij-stepanov-dozhd/",
+            "ua_link": "https://virshi.com.ua/myhajl-semenko-zasnulist/"
+        }
+    },
+    {
+        "eventDate": "2024-05-04",
+        "src": "images/20240504.jpg",
+        "thumb": "thumbnails/20240504.jpg",
+        "alt_ru": "\u0413\u043e\u0434\u0435\u0440\u0434\u0437\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0413\u043e\u0440\u0434\u0435\u0434\u0437\u0435, \u0413\u0440\u0443\u0437i\u044f",
+        "descriptions": {
+            "ru": "poems/20240504_ru.txt",
+            "ru_link": "https://rupoem.ru/zhukovskij/na-solnce-temnyj.aspx",
+            "ua": "poems/20240504_ua.txt",
+            "ua_link": "https://virshi.com.ua/pavlo-tychyna-lystya-padaye/"
+        }
+    },
+    {
+        "eventDate": "2024-05-05",
+        "src": "images/20240505.jpg",
+        "thumb": "thumbnails/20240505.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240505_ru.txt",
+            "ru_link": "https://poemata.ru/poets/rozhdestvenskiy-robert/nervy/",
+            "ua": "poems/20240505_ua.txt",
+            "ua_link": "https://virshi.com.ua/maksym-rylskyj-esmeralda/"
+        }
+    },
+    {
+        "eventDate": "2024-05-06",
+        "src": "images/20240506.jpg",
+        "thumb": "thumbnails/20240506.jpg",
+        "alt_ru": "\u0410\u0444\u0438\u043d\u044b, \u0413\u0440\u0435\u0446\u0438\u044f",
+        "alt_ua": "\u0410\u0444\u0456\u043d\u0438, \u0413\u0440\u0435\u0446\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240506_ru.txt",
+            "ru_link": "https://poemata.ru/poets/tyutchev-fedor/rim-nochyu/",
+            "ua": "poems/20240506_ua.txt",
+            "ua_link": "https://virshi.com.ua/lesya-uaayinka-oj-vysoko-soncze-v-yasnim-nebi-stalo/"
+        }
+    },
+    {
+        "eventDate": "2024-05-07",
+        "src": "images/20240507.jpg",
+        "thumb": "thumbnails/20240507.jpg",
+        "alt_ru": "\u041c\u0435\u0440\u0442\u0432\u043e\u0435 \u043c\u043e\u0440\u0435, \u0418\u0437\u0440\u0430\u0438\u043b\u044c",
+        "alt_ua": "\u041c\u0435\u0440\u0442\u0432\u0435 \u043c\u043e\u0440\u0435, \u0406\u0437\u0440\u0430\u0457\u043b\u044c",
+        "descriptions": {
+            "ru": "poems/20240507_ru.txt",
+            "ru_link": "https://poemata.ru/poets/drunina-yuliya/nelzya-privyknut-k-dyavolskomu-znoyu/",
+            "ua": "poems/20240507_ua.txt",
+            "ua_link": "https://virshi.com.ua/myhajl-semenko-obezzhenshhenna-pustelya/"
+        }
+    },
+    {
+        "eventDate": "2024-05-08",
+        "src": "images/20240508.jpg",
+        "thumb": "thumbnails/20240508.jpg",
+        "alt_ru": "\u0421\u0438\u043e\u043d\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0421i\u043e\u043d, \u0413\u0440\u0443\u0437i\u044f",
+        "descriptions": {
+            "ru": "poems/20240508_ru.txt",
+            "ru_link": "https://stih.su/sologub-f-k-zabelelsya-tuman-za-rekoy/",
+            "ua": "poems/20240508_ua.txt",
+            "ua_link": "https://virshi.com.ua/myhajl-semenko-sosny/"
+        }
+    },
+    {
+        "eventDate": "2024-05-09",
+        "src": "images/20240509.jpg",
+        "thumb": "thumbnails/20240509.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240509_ru.txt",
+            "ru_link": "https://stih.su/severyanin-i-eshhe-vy-devushka/",
+            "ua": "poems/20240509_ua.txt",
+            "ua_link": "https://virshi.com.ua/maksym-rylskyj-nadvori-doshh-holodnyj-viter-vyye/"
+        }
+    },
+    {
+        "eventDate": "2024-05-10",
+        "src": "images/20240510.jpg",
+        "thumb": "thumbnails/20240510.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240510_ru.txt",
+            "ru_link": "https://poemata.ru/poets/nikitin-ivan/19-oktyabrya/",
+            "ua": "poems/20240510_ua.txt",
+            "ua_link": "https://virshi.com.ua/myhajlo-stelmah-vesna/"
+        }
+    },
+    {
+        "eventDate": "2024-05-11",
+        "src": "images/20240511.jpg",
+        "thumb": "thumbnails/20240511.jpg",
+        "alt_ru": "\u0411\u0435\u044d\u0440-\u0428\u0435\u0432\u0430, \u0418\u0437\u0440\u0430\u0438\u043b\u044c",
+        "alt_ua": "\u0411\u0435\u0435\u0440-\u0428\u0435\u0432\u0430, \u0406\u0437\u0440\u0430\u0457\u043b\u044c",
+        "descriptions": {
+            "ru": "poems/20240511_ru.txt",
+            "ru_link": "https://poems.net.ua/poet/%D0%9A%D0%B0%D0%BF%D0%BD%D0%B8%D1%81%D1%82_%D0%92%D0%B0%D1%81%D0%B8%D0%BB%D0%B8%D0%B9_%D0%92%D0%B0%D1%81%D0%B8%D0%BB%D1%8C%D0%B5%D0%B2%D0%B8%D1%87/%D0%97%D0%B0%D0%BA%D0%B0%D1%82_%D0%A1%D0%BE%D0%BB%D0%BD%D1%86%D0%B0",
+            "ua": "poems/20240511_ua.txt",
+            "ua_link": "https://virshi.com.ua/lesya-uaayinka-sonechko-vstalo-prokynulos-yasne/"
+        }
+    },
+    {
+        "eventDate": "2024-05-12",
+        "src": "images/20240512.jpg",
+        "thumb": "thumbnails/20240512.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240512_ru.txt",
+            "ru_link": "https://poemata.ru/poets/bryusov-valeriy/zaklinanie-krasnyy-ogon-raskrutis-raskrutis/",
+            "ua": "poems/20240512_ua.txt",
+            "ua_link": "https://virshi.com.ua/vasyl-symonenko-lesya-uaayinka/"
+        }
+    },
+    {
+        "eventDate": "2024-05-13",
+        "src": "images/20240513.jpg",
+        "thumb": "thumbnails/20240513.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240513_ru.txt",
+            "ru_link": "https://poemata.ru/poets/bryusov-valeriy/landysh/",
+            "ua": "poems/20240513_ua.txt",
+            "ua_link": "https://virshi.com.ua/myhajlo-stelmah-lyubymo-vesnu/"
+        }
+    },
+    {
+        "eventDate": "2024-05-14",
+        "src": "images/20240514.jpg",
+        "thumb": "thumbnails/20240514.jpg",
+        "alt_ru": "\u042d\u0439\u043b\u0430\u0442, \u0418\u0437\u0440\u0430\u0438\u043b\u044c",
+        "alt_ua": "\u0415\u0439\u043b\u0430\u0442, \u0406\u0437\u0440\u0430\u0457\u043b\u044c",
+        "descriptions": {
+            "ru": "poems/20240514_ru.txt",
+            "ru_link": "https://poemata.ru/poets/blok-aleksandr/gorod-spit-okutan-mgloyu/",
+            "ua": "poems/20240514_ua.txt",
+            "ua_link": "https://virshi.com.ua/myhajl-semenko-pro-bili-nochi/"
+        }
+    },
+    {
+        "eventDate": "2024-05-15",
+        "src": "images/20240515.jpg",
+        "thumb": "thumbnails/20240515.jpg",
+        "alt_ru": "\u0418\u0435\u0440\u0443\u0441\u0430\u043b\u0438\u043c, \u0418\u0437\u0440\u0430\u0438\u043b\u044c",
+        "alt_ua": "\u0404\u0440\u0443\u0441\u0430\u043b\u0438\u043c, \u0406\u0437\u0440\u0430\u0457\u043b\u044c",
+        "descriptions": {
+            "ru": "poems/20240515_ru.txt",
+            "ru_link": "https://poemata.ru/poets/voloshin-maksimilian/ey-zhe/",
+            "ua": "poems/20240515_ua.txt",
+            "ua_link": "https://virshi.com.ua/olena-teliga-sonnyj-den/"
+        }
+    },
+    {
+        "eventDate": "2024-05-16",
+        "src": "images/20240516.jpg",
+        "thumb": "thumbnails/20240516.jpg",
+        "alt_ru": "\u0422\u0431\u0438\u043b\u0438\u0441\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0422\u0431\u0456\u043b\u0456\u0441\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240516_ru.txt",
+            "ru_link": "https://poemata.ru/poets/pushkin-aleksandr/nadpis-k-besedke/",
+            "ua": "poems/20240516_ua.txt",
+            "ua_link": "https://virshi.com.ua/vasyl-stus-ves-obshyr-mij-chotyry-na-chotyry/"
+        }
+    },
+    {
+        "eventDate": "2024-05-17",
+        "src": "images/20240517.jpg",
+        "thumb": "thumbnails/20240517.jpg",
+        "alt_ru": "\u0410\u0444\u0438\u043d\u0430, \u0413\u0440\u0435\u0446\u0438\u044f",
+        "alt_ua": "\u0410\u0444\u0456\u043d\u0438, \u0413\u0440\u0435\u0446\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240517_ru.txt",
+            "ru_link": "https://poemata.ru/poets/ahmatova-anna/tamare-platonovne-karsavinoy/",
+            "ua": "poems/20240517_ua.txt",
+            "ua_link": "https://virshi.com.ua/pavlo-tychyna-gej-vdarte-v-struny-kobzari/"
+        }
+    },
+    {
+        "eventDate": "2024-05-18",
+        "src": "images/20240518.jpg",
+        "thumb": "thumbnails/20240518.jpg",
+        "alt_ru": "\u0411\u0430\u0442\u0443\u043c\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0411\u0430\u0442\u0443\u043c\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240518_ru.txt",
+            "ru_link": "https://poemata.ru/poets/bryusov-valeriy/more-v-bessilnom-pokoe/",
+            "ua": "poems/20240518_ua.txt",
+            "ua_link": "https://virshi.com.ua/myhajl-semenko-krayevyd/"
+        }
+    },
+    {
+        "eventDate": "2024-05-19",
+        "src": "images/20240519.jpg",
+        "thumb": "thumbnails/20240519.jpg",
+        "alt_ru": "\u0411\u0430\u043a\u0443\u0440\u0438\u0430\u043d\u0438, \u0413\u0440\u0443\u0437\u0438\u044f",
+        "alt_ua": "\u0411\u0430\u043a\u0443\u0440\u0456\u0430\u043d\u0456, \u0413\u0440\u0443\u0437\u0456\u044f",
+        "descriptions": {
+            "ru": "poems/20240519_ru.txt",
+            "ru_link": "https://rustih.ru/sergej-esenin-v-xolmax-zelyonyx-tabuny-konej/",
+            "ua": "poems/20240519_ua.txt",
+            "ua_link": "https://virshi.com.ua/vasyl-symonenko-perespiv-z-narodnoyi/"
+        }
+    },
+    {
+        "eventDate": "2024-05-20",
+        "src": "images/20240520.jpg",
+        "thumb": "thumbnails/20240520.jpg",
+        "alt_ru": "\u042d\u0439\u043b\u0430\u0442, \u0418\u0437\u0440\u0430\u0438\u043b\u044c",
+        "alt_ua": "\u0415\u0439\u043b\u0430\u0442, \u0406\u0437\u0440\u0430\u0457\u043b\u044c",
+        "descriptions": {
+            "ru": "poems/20240520_ru.txt",
+            "ru_link": "https://www.culture.ru/poems/7538/mir-muzyki",
+            "ua": "poems/20240520_ua.txt",
+            "ua_link": "https://virshi.com.ua/dmytro-pavlychko-os-ya-tanczyuyu/"
+        }
+    },
+    {
+        "eventDate": "2024-05-21",
+        "src": "images/20240521.jpg",
+        "thumb": "thumbnails/20240521.jpg",
+        "alt_ru": "\u041c\u0430\u0441\u0430\u0434\u0430, \u0418\u0437\u0440\u0430\u0438\u043b\u044c",
+        "alt_ua": "\u041c\u0430\u0441\u0430\u0434\u0430, \u0406\u0437\u0440\u0430\u0457\u043b\u044c",
+        "alt_en": "Masada, Israel",
+        "descriptions": {
+            "ru": "poems/20240521_ru.txt",
+            "ru_link": "https://poemata.ru/poets/bryusov-valeriy/na-melare/",
+            "ua": "poems/20240521_ua.txt",
+            "ua_link": "https://virshi.com.ua/pavlo-tychyna-koly-v-tvoyi-ochi-dyvlyusya/",
+            "en": "poems/20240521_en.txt",
+            "en_link": "https://englishverse.com/poets/shelley_percy_bysshe/../../poems/ozymandias"
+        }
+    }
+]

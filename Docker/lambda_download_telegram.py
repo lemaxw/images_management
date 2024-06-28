@@ -6,11 +6,28 @@ from datetime import datetime
 import json
 from collections import OrderedDict
 
+def extract_last_non_empty_line(text):
+    # Split the text into lines and remove any trailing whitespace
+    lines = text.strip().split('\n')
+    
+    # Remove empty lines
+    lines = [line for line in lines if line.strip()]
+    
+    if lines:
+        # Get the last non-empty line
+        last_non_empty_line = lines[-1]
+        # Get all text before the last non-empty line
+        text_before_last = '\n'.join(lines[:-1])
+        return text_before_last, last_non_empty_line
+    else:
+        return '', ''
+
 
 def lambda_handler():
     # Telegram setup
     channel_id_ru = os.getenv('TELEGRAM_CHANNEL_DP_ID_RU')
     channel_id_ua = os.getenv('TELEGRAM_CHANNEL_DP_ID_UA')
+    channel_id_en = os.getenv('TELEGRAM_CHANNEL_DP_ID_EN')
     api_id =  os.getenv('TELEGRAM_API_ID')
     api_hash =  os.getenv('TELEGRAM_API_HASH')
     phone_number = os.getenv('PHONE_NUMBER')
@@ -21,19 +38,29 @@ def lambda_handler():
     
     # Process updates to find the latest message from the specific channel
     last_message_text_ru = None
-    last_message_text_ru = None
+    last_message_text_ua = None
+    last_message_text_en = None
     with app:
         messages = app.get_chat_history(channel_id_ru)
         last_message_text_ru = next(messages)
         date_str_ru = last_message_text_ru.date.strftime('%Y%m%d')
-  
-  #      print(last_message_text_ru.caption, last_message_text_ru.date, last_message_text_ru.caption_entities[0])
-
+        text_ru, location_ru = extract_last_non_empty_line(last_message_text_ru.caption)
+        print(text_ru, location_ru, last_message_text_ru.date, last_message_text_ru.caption_entities[1].url)
    
         messages = app.get_chat_history(channel_id_ua)
         last_message_text_ua = next(messages)
         date_str_ua = last_message_text_ua.date.strftime('%Y%m%d')
-        print(last_message_text_ua.caption, last_message_text_ua.date, last_message_text_ua.caption_entities[0])
+        text_ua, location_ua = extract_last_non_empty_line(last_message_text_ua.caption)
+        print(text_ua, location_ua, last_message_text_ua.date, last_message_text_ua.caption_entities[1].url)
+
+        messages = app.get_chat_history(channel_id_en)
+        last_message_text_en = next(messages)
+        date_str_en = last_message_text_en.date.strftime('%Y%m%d')
+        text_en, location_en = extract_last_non_empty_line(last_message_text_en.caption)
+        print(text_en, location_en, last_message_text_en.date, last_message_text_en.caption_entities[1].url)
+
+
+        
 
         # Set up S3 client
         s3 = boto3.client('s3')
@@ -45,19 +72,30 @@ def lambda_handler():
         content = response['Body'].read().decode('utf-8')
         data = json.loads(content)
 
+        date_name= last_message_text_ua.date.strftime('%Y-%m-%d')
         image_name= f'images/{date_str_ua}.jpg'
+        thumb_name= f'thumbnails/{date_str_ua}.jpg'
         filename_ua = f'poems/{date_str_ua}_ua.txt'
         filename_ru = f'poems/{date_str_ru}_ru.txt'
+        filename_en = f'poems/{date_str_en}_en.txt'
 
         # Add a new element to the array (append to end of the list)
         
         data.append(
             {   
+                "eventDate": f"{date_name}",
                 "src": f"{image_name}",
-                "alt": "Description of Image",
+                "thumb": f"{thumb_name}",
+                "alt_ru": f"{location_ru}",
+                "alt_ua": f"{location_ua}",
+                "alt_en": f"{location_en}",
                 "descriptions": {
                     "ru": f"{filename_ru}",
-                    "ukr": f"{filename_ua}"
+                    "ru_link": f"{last_message_text_ru.caption_entities[1].url}",
+                    "ua": f"{filename_ua}",
+                    "ua_link": f"{last_message_text_ua.caption_entities[1].url}",
+                    "en": f"{filename_en}",
+                    "en_link": f"{last_message_text_en.caption_entities[1].url}"
                 }
             }
         )
@@ -68,8 +106,9 @@ def lambda_handler():
         
         
         # Upload the message to S3
-        s3.put_object(Body=last_message_text_ua.caption, Bucket=bucket_name, Key=filename_ua)
-        s3.put_object(Body=last_message_text_ru.caption, Bucket=bucket_name, Key=filename_ru)
+        s3.put_object(Body=text_ua, Bucket=bucket_name, Key=filename_ua)
+        s3.put_object(Body=text_ru, Bucket=bucket_name, Key=filename_ru)
+        s3.put_object(Body=text_en, Bucket=bucket_name, Key=filename_en)
         s3.put_object(Body=new_content, Bucket=bucket_name, Key=object_key)
 
     return {

@@ -19,3 +19,4 @@ blocks_as_arrays = read_file_to_blocks(filename)
 
 update_entry(blocks_as_arrays[1], 'ru')
 update_entry(blocks_as_arrays[0], 'ua')
+update_entry(blocks_as_arrays[2], 'en')

@@ -17,6 +17,8 @@ def create_connection(dbname):
         database='russian_poetry'
     if dbname == 'ua':
         database='ukranian_poetry'
+    if dbname == 'en':
+        database='english_poetry'
 
     conn = psycopg2.connect(
         host='localhost',  # replace with your server host if different
@@ -173,3 +175,28 @@ def update_entry(ids, dbname):
         # Close the connection
         cursor.close()
         conn.close()
+
+def update_author_link(link, author, dbname):
+    # Creating the connection
+    conn = create_connection(dbname)
+    
+    # Creating the cursor object
+    cursor = conn.cursor()
+    
+    # SQL query to update date_of_usage for given ids
+    query = "UPDATE poems SET author = %s WHERE link_to_source = %s;"
+
+    # Execute the query for each id
+    try:
+        cursor.execute(query, (author, link))
+        #print(cursor.mogrify(query, (author, link)))
+        print(f"updated poem {link}, to {author}")
+        # Commit changes to database
+        conn.commit()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        conn.rollback()
+    finally:
+        # Close the connection
+        cursor.close()
+        conn.close()        

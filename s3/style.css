@@ -1,0 +1,144 @@
+.fc-event {
+    background-color: #fff; /* Light background */
+    border: none; /* No borders */
+    color: #000; /* Black text */
+}
+
+.fc-daygrid-day {
+    height: 250px; /* Fixed height for all cells */
+    overflow: hidden;
+}
+
+.fc-daygrid-day-frame {
+    display: flex;
+    align-items: center; /* Center content vertically */
+    justify-content: center; /* Center content horizontally */
+    height: 100%;
+}
+
+.fc-daygrid-event img {        
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Change to 'contain' if you prefer to see the whole image */
+    display: block;
+}
+
+#modal-image {
+    max-width: 100%; /* Image takes maximum of 100% of modal-content width */
+    max-height: 70vh; /* Limits the image height to 70% of the viewport height */
+    object-fit: contain; /* Change to 'contain' if you prefer to see the whole image */
+    margin-bottom: 15px; /* Additional space below the image, remove if using gap */
+}
+
+#modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+#nav-buttons {
+    display: flex; /* Ensures the navigation buttons are inline */
+}
+
+#modal-title-ua {
+    flex-grow: 1;  /* Allows the title to occupy the maximum space */
+    text-align: center;
+    margin: 0 10px; /* Provides spacing around the title */
+}
+
+#close-btn {
+    cursor: pointer;
+    font-size: 24px;
+}
+
+#nav-buttons button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 8px 10px; /* Adjust padding as needed */
+}
+
+#modal-header button:hover,
+#close-btn:hover {
+    color: #666;  /* Hover effect for buttons */
+}
+
+#modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 66%; /* Modal content width to 2/3 of screen width */
+    max-height: 100%; /* Modal content height to 2/3 of screen width */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center everything in the modal */
+    overflow: hidden; /* Ensures no content spills out */
+}
+
+
+#modal {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none; /* Initially hidden */
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+#image-and-text-container {
+    display: flex;
+    flex-direction: column; /* Default to vertical layout */
+    gap: 20px; /* Adjust this value to increase or decrease the space */
+    align-items: center;
+}
+
+#text-content {
+    text-align: left;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* Optional: adds space between columns/rows */
+    padding: 10px 0; /* Adds padding above and below the text content */
+}
+
+
+
+.column {
+    flex: 1; /* Makes each child of text-content take equal width */
+    min-width: 0; /* Prevents flex items from overflowing their container */
+}
+
+@media screen and (max-width: 768px) { /* Adjust this breakpoint as needed */
+    .column {
+        flex: 0 0 100%; /* Makes each child full width on smaller screens */
+    }
+}
+
+footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #333;
+    color: #fff;
+}
+
+#social-media a {
+    color: #fff;  /* Adjust color as needed */
+    text-decoration: none;
+    margin-left: 10px;
+}
+
+#social-media img {
+    vertical-align: middle;
+}
+
+#social-media a:hover, #social-media a:focus {
+    text-decoration: underline;
+}

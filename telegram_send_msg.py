@@ -22,6 +22,10 @@ bot = Bot(token=token)
 async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,entity,rate, similarity):    
 
     found_caption=False
+    poem=poem.replace("<p>", "\n")
+    poem=poem.replace("</p>", "")
+    poem=poem.replace("<br>", "\n")
+    poem=poem.replace("<br/>", "")
     while(found_caption == False):
         caption = f'<i>{poem}</i>\n\n'  # Add line break for the next line
         caption += f'<a href="{url}">{poet}</a>\n\n'
