@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+    <title>Verses & Vistas</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <meta charset="UTF-8">
+<head>
+    
+<link href='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.11.5/main.min.css' rel='stylesheet' />
+<link rel="stylesheet" href="style.css">
+<script src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.11.5/main.min.js'></script>
+<script src='https://code.jquery.com/jquery-3.3.1.min.js'></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    
+</head>
+<body>
+    <div id='calendar'></div>
+   <!-- Modal Structure -->
+   <div id="modal">
+    <div id="modal-content">
+        <div id="modal-header">
+            <div id="nav-buttons">
+                <button id="left-btn">&lt;</button>
+                <button id="right-btn">&gt;</button>       
+            </div>
+            <div id="poem-btn" class="poem-btn" lang="uk">Poems</div>
+            <h1 id="modal-title-ua" style="flex-grow: 1; text-align: center;"></h1>  
+            <div id="modal-title-date" class="poem-date" >__</div>
+            
+            <span id="close-btn" style="margin-left: auto;">&times;</span>   
+        </div>   
+        <div id="image-and-text-container">
+            <img id="modal-image" src="" alt="Event image">           
+        </div>
+        <div id="poem-table" class="poem-table">
+            <div id="text-content">                
+                <div id="desc-ru" class="column">
+                    <a id="link-ru" href="#" target="_blank">Read more</a>
+                </div>
+                <div id="desc-ua" class="column">
+                    <a id="link-ua" href="#" target="_blank">Read more</a>
+                </div>
+                <div id="desc-en" class="column">
+                    <a id="link-en" href="#" target="_blank">Read more</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+    
+</body>
+
+<footer>
+    <p>&copy; 2024 Maxim Pshater. All Rights Reserved.</p>
+    <div id="social-media">
+        <a href="https://t.me/daypictureua" target="_blank" title="Follow us on Telegram">
+            <i class="fab fa-telegram-plane"></i> UA
+        </a>
+        <a href="https://t.me/daypicture" target="_blank" title="Follow us on Telegram">
+            <i class="fab fa-telegram-plane"></i> RU
+        </a>
+        <a href="https://t.me/PicturesPoems" target="_blank" title="Follow us on Telegram">
+            <i class="fab fa-telegram-plane"></i> EN
+        </a>
+    </div>
+</footer>
+</html>
