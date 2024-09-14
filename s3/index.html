@@ -10,7 +10,10 @@
     <script src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.11.5/main.min.js'></script>
     <script src='https://code.jquery.com/jquery-3.3.1.min.js'></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.css">
+    
 </head>
 <body>
     <header>        
@@ -29,8 +32,8 @@
             </div>
         </div>
         <nav id="settings-menu" style="display: none;">
-            <ul>
-                <li><a href="#" id="search-image">Search Image</a></li>
+            <ul>                
+                <input type="text" id="searchInput" placeholder="Enter search term (tag, location, author)..." size="40">
                 <p>&copy; 2024 Maxim Pshater. All Rights Reserved.</p>
             </ul>
         </nav>        
@@ -77,6 +80,7 @@
                     <button id="left-btn-search">&lt;</button>
                     <button id="right-btn-search">&gt;</button>
                 </div>
+                <h1 id="results-title" style="flex-grow: 1; text-align: center;"></h1>
                 <span id="close-btn-search">&times;</span>
             </div>
             <div id="thumbnail-grid"></div>

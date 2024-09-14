@@ -3,8 +3,9 @@ let events = [];  // Global or higher scope array to hold event data
 let index = [];
 let fuse;    
 let currentPage = 1;
-const itemsPerPage = 16;
+const itemsPerPage = 20;
 let searchResults = []; // Global variable to store search results
+let query = ""
 
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -13,10 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             currentIndex = 0;
-            events = data;  // Store the fetched events in the higher scope array
-            buildIndex(events);
-            // Initialize Fuse.js with the built index
-            fuse = new Fuse(index, { keys: ['key'], threshold: 0.3 });  // Adjust threshold as needed            
+            events = data;  // Store the fetched events in the higher scope array                    
 
             // Prefetch all text files
             const fetchTextPromises = events.map(event => {
@@ -38,7 +36,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     event.texts = texts.reduce((acc, result) => {
                         if (result) { // Check if result is not null
                             const { lang, text } = result;
-                            acc[lang] = text;
+
+                            // Split the text by newline and extract the second-to-last element as the author
+                            const lines = text.split('\n').filter(line => line.trim() !== '');
+                            const author = lines[lines.length - 1]; // Get the n-1 element 
+                            acc[lang] = { text, author }; // Include the author in the accumulator
+
+                            //acc[lang] = text;
                         }
                         return acc;
                     }, {});
@@ -84,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         element.addEventListener('mouseenter', function() {
                             currentIndexOfText = (currentIndexOfText + 1) % Object.keys(texts).length;
-                            textElement.innerText = texts[languages[currentIndexOfText]];
+                            textElement.innerText = texts[languages[currentIndexOfText]].text;
                             textElement.style.display = 'block';
                         });
 
@@ -101,33 +105,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
                 calendar.render();
+                buildIndex(events);
+                // Initialize Fuse.js with the built index
+                fuse = new Fuse(index, { keys: ['key'], threshold: 0.3 });  // Adjust threshold as needed    
             });
         })
         .catch(error => console.error('Error loading events:', error)); // Error handling for the fetch operation
-
+        
+   
    // Build search index
    function buildIndex(images) {
+        let totalImgKeys = [];
         images.forEach((image, idx) => {
-            let imgKeys = [...image.tags];
+            let imgKeys = [...image.tags.en, ...image.tags.ru, ...image.tags.ua];
 
             // Safely add alt texts if they exist
-            if (image.alt_ru) imgKeys.push(image.alt_ru);
-            if (image.alt_ua) imgKeys.push(image.alt_ua);
-            if (image.alt_en) imgKeys.push(image.alt_en);
+            if (image.alt_ru) imgKeys.push(...image.alt_ru.split(",").map(item => item.trim()));
+            if (image.alt_ua) imgKeys.push(...image.alt_ua.split(",").map(item => item.trim()));
+            if (image.alt_en) imgKeys.push(...image.alt_en.split(",").map(item => item.trim()));
+
+            if (image.texts["ru"] && image.texts["ru"].author) imgKeys.push(image.texts["ru"].author.split('.').map(word => word.trim()).filter(word => word.length > 1).pop());
+            if (image.texts["ua"] && image.texts["ua"].author) imgKeys.push(image.texts["ua"].author.split('.').map(word => word.trim()).filter(word => word.length > 1).pop());
+            if (image.texts["en"] && image.texts["en"].author) imgKeys.push(image.texts["en"].author.split('.').map(word => word.trim()).filter(word => word.length > 1).pop());
 
             // Push each key with corresponding index into the array
             imgKeys.forEach(key => {
                 index.push({ key: key.toLowerCase(), idx: idx });
             });
-        });
-    }
+            totalImgKeys.push(...imgKeys);
+        });   
+        totalImgKeys = [...new Set(totalImgKeys)]
+        new Awesomplete(searchInput, {maxItems: 20,  list: totalImgKeys });   
+    }    
 
-    // Handle search
-    document.getElementById('search-image').addEventListener('click', function () {
-        let query = prompt("Enter search term:");
-        if (query) {
-            searchImages(query.toLowerCase());
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('awesomplete-selectcomplete', () => {
+        query = searchInput.value;        
+        if (query) {            
+            searchImages();
         }
+        searchInput.value = ""
     });
 
     // Close button functionality
@@ -182,8 +199,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
      // Search and display results
-     function searchImages(query) {
-        let result = fuse.search(query);
+     function searchImages() {
+        let result = fuse.search(query.toLowerCase());
 
         searchResults = result.map(item => item.item.idx); // Store results globally
         searchResults = [...new Set(searchResults)]; // Remove duplicates
@@ -207,6 +224,9 @@ document.addEventListener('DOMContentLoaded', function() {
         let startIdx = (currentPage - 1) * itemsPerPage;
         let endIdx = startIdx + itemsPerPage;
         let paginatedIndices = searchResults.slice(startIdx, endIdx);
+
+        const resultsTitle = document.getElementById('results-title');
+        resultsTitle.textContent = query;
 
         let grid = document.getElementById('thumbnail-grid');
         grid.innerHTML = '';  // Clear previous results
@@ -342,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let btnTexts = ["стихи", "вірші", "poems"];
     let currentLangIndex = 0;
     function changeText() {
-        const modalTitle = document.getElementById('modal-title-ua');
+        const modalTitle = document.getElementById('modal-title-ua');        
         const poemBtn = document.getElementById('poem-btn');
         modalTitle.textContent = texts[currentLangIndex];
         poemBtn.textContent = btnTexts[currentLangIndex];

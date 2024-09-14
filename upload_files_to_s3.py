@@ -72,9 +72,14 @@ with open(input_file, "r") as file:
         if should_resize(filename_local):
             resized_image_path = resize_image(filename_local, quality=85)
             log_image_size(resized_image_path, "Resized image")
+            if os.path.getsize(resized_image_path)  > os.path.getsize(filename_local):
+                resized_image_path = filename_local
+                print("original image smaller than resized, keep original")
+            
         else:
             resized_image_path = filename_local
 
+        
         try:
             s3_client.upload_file(resized_image_path, bucket_name, key)
             print(f"File {resized_image_path} uploaded as {key} to {bucket_name} successfully")

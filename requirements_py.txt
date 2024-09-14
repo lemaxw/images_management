@@ -23,7 +23,6 @@ cleo==2.0.1
 click==8.1.7
 clip @ git+https://github.com/openai/CLIP.git@a1d071733d7111c9c014f024669f959182114e33
 cmake==3.26.4
-command-not-found==0.3
 crashtest==0.4.1
 cryptography==3.4.8
 dbus-python==1.2.18

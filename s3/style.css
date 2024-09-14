@@ -340,7 +340,7 @@ html, body {
 
 #thumbnail-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     grid-template-rows: repeat(4, auto);
     gap: 20px;
     margin-top: 20px;
@@ -356,3 +356,7 @@ html, body {
     object-fit: cover;
     cursor: pointer;
 }
+
+.awesomplete {
+    z-index: 1000; /* Ensure the autocomplete list is on top */
+  }
