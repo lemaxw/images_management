@@ -1,10 +1,13 @@
 import json
-import os
-from pyrogram import Client
+import os, sys
+from pyrogram import Client, errors
 import boto3
 from datetime import datetime
 import json
 from collections import OrderedDict
+import tempfile
+from rekognition_get_tags import get_image_tags_aws
+from aws_translator import translate_word
 
 def extract_last_non_empty_line(text):
     # Split the text into lines and remove any trailing whitespace
@@ -23,6 +26,38 @@ def extract_last_non_empty_line(text):
         return '', ''
 
 
+def download_image(app, message):
+    try:
+            if message.photo:
+                # Download the photo to a temporary file
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:                
+                    app.download_media(message.photo.file_id, file_name=temp_file.name)
+                    return temp_file.name
+            else:
+                raise ValueError(f"No photo found in the specified message {message}.")
+    except errors.FloodWait as e:
+        print(f"Flood wait: need to wait {e.value} seconds")
+        time.sleep(e.value)
+    except errors.BadRequest as e:
+        print(f"Bad request: {str(e)}")
+    except errors.MediaEmpty as e:
+        print(f"Media is empty: {str(e)}")
+    except errors.MediaInvalid as e:
+        print(f"Invalid media: {str(e)}")
+    except errors.MediaUnavailable as e:
+        print(f"Media unavailable: {str(e)}")
+    except errors.ServerError as e:
+        print(f"Server error: {str(e)}")
+    except errors.Unauthorized as e:
+        print(f"Unauthorized access: {str(e)}")
+    except errors.NetworkError as e:
+        print(f"Network error: {str(e)}")
+    except IOError as e:
+        print(f"I/O error: {str(e)}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
+    return None;
+
 def lambda_handler():
     # Telegram setup
     channel_id_ru = os.getenv('TELEGRAM_CHANNEL_DP_ID_RU')
@@ -34,30 +69,49 @@ def lambda_handler():
 
     app = Client("my_account", api_id=api_id, api_hash=api_hash, phone_number=phone_number)
 
-    date_str_ua = date_str_ru = datetime.now()
+    date_str_en = date_str_ua = date_str_ru = datetime.now()
     
     # Process updates to find the latest message from the specific channel
     last_message_text_ru = None
     last_message_text_ua = None
     last_message_text_en = None
+    url_ua = 'none'
+    url_en = 'none'
+    url_ru = 'none'
+    tags_en = tags_ua = tags_ru = None
+
     with app:
         messages = app.get_chat_history(channel_id_ru)
         last_message_text_ru = next(messages)
+        temp_file_path = download_image(app, last_message_text_ru)
+        if temp_file_path != None:  # Check if the message contains a photo
+            tags_en = get_image_tags_aws(temp_file_path)
+            if tags_en != None:
+                tags_ru = translate_word(','.join(tags_en), "ru").strip().split(',')
+                tags_ua = translate_word(','.join(tags_en), "uk").strip().split(',')
+                #print(f"temp_file: {temp_file_path}, tags: {tags_en}, tags: {tags_ru}, tags: {tags_ua} ")                
+
         date_str_ru = last_message_text_ru.date.strftime('%Y%m%d')
+        if len(last_message_text_ru.caption_entities) > 1:
+            url_ru = last_message_text_ru.caption_entities[1]
         text_ru, location_ru = extract_last_non_empty_line(last_message_text_ru.caption)
-        print(text_ru, location_ru, last_message_text_ru.date, last_message_text_ru.caption_entities[1].url)
+        print(text_ru, location_ru, last_message_text_ru.date, url_ru, tags_ru)
    
         messages = app.get_chat_history(channel_id_ua)
         last_message_text_ua = next(messages)
         date_str_ua = last_message_text_ua.date.strftime('%Y%m%d')
         text_ua, location_ua = extract_last_non_empty_line(last_message_text_ua.caption)
-        print(text_ua, location_ua, last_message_text_ua.date, last_message_text_ua.caption_entities[1].url)
+        if len(last_message_text_ua.caption_entities) > 1:
+                url_ua = last_message_text_ua.caption_entities[1]
+        print(text_ua, location_ua, last_message_text_ua.date, url_ua, tags_ua)
 
         messages = app.get_chat_history(channel_id_en)
         last_message_text_en = next(messages)
         date_str_en = last_message_text_en.date.strftime('%Y%m%d')
+        if len(last_message_text_en.caption_entities) > 1:
+                url_en = last_message_text_en.caption_entities[1]        
         text_en, location_en = extract_last_non_empty_line(last_message_text_en.caption)
-        print(text_en, location_en, last_message_text_en.date, last_message_text_en.caption_entities[1].url)
+        print(text_en, location_en, last_message_text_en.date, url_en, tags_en)
 
 
         
@@ -91,14 +145,20 @@ def lambda_handler():
                 "alt_en": f"{location_en}",
                 "descriptions": {
                     "ru": f"{filename_ru}",
-                    "ru_link": f"{last_message_text_ru.caption_entities[1].url}",
+                    "ru_link": f"{url_ru}",
                     "ua": f"{filename_ua}",
-                    "ua_link": f"{last_message_text_ua.caption_entities[1].url}",
+                    "ua_link": f"{url_ua}",
                     "en": f"{filename_en}",
-                    "en_link": f"{last_message_text_en.caption_entities[1].url}"
+                    "en_link": f"{url_en}"
+                },
+                "tags": {
+                    "en": f"{tags_en}",
+                    "ua": f"{tags_ua}",
+                    "ru": f"{tags_ru}"                
                 }
             }
         )
+            
         
         # Convert the Python list back to a JSON string
         new_content = json.dumps(data, indent=4)

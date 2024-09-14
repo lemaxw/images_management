@@ -1,6 +1,6 @@
-docker build -t telegram-bot .
+docker build -f Docker/Dockerfile -t telegram-bot .
 docker run --env-file ~/.env -v ~/.aws:/root/.aws telegram-bot
 
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 212810157789.dkr.ecr.us-east-1.amazonaws.com
+aws ecr get-login-password --region us-east-1 --profile max| docker login --username AWS --password-stdin 212810157789.dkr.ecr.us-east-1.amazonaws.com
 docker tag telegram-bot:latest 212810157789.dkr.ecr.us-east-1.amazonaws.com/telegram-bot:latest
 docker push 212810157789.dkr.ecr.us-east-1.amazonaws.com/telegram-bot:latest

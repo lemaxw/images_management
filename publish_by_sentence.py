@@ -2,7 +2,7 @@ import asyncio
 from db_upsert_entity import get_poems
 from telegram_send_msg import send_telegram_message
 from sentences_comparator import get_similar_sentences
-from google_translator import translate_word
+from aws_translator import translate_word
 
 def publish_similarities(image, phrase, entities, poems, location):
     similarity_scores = get_similar_sentences(phrase, entities)
@@ -52,9 +52,9 @@ with open(input_file, "r") as file:
         location = parts[0]
         filename = parts[1]
         statement = parts[2]
-        
+
         # Print or do something with filename and statement
-        print(f"Filename: {filename}, Statement: {statement}")
+        print(f"Filename: {filename}, statement: {statement}")
 
         publish_similarities(filename, statement, entities_ua, poems_ua, translate_word(location, 'uk'))
         publish_similarities(filename, statement, entities_ru, poems_ru, translate_word(location, 'ru'))
