@@ -8,6 +8,7 @@ from collections import OrderedDict
 import tempfile
 from rekognition_get_tags import get_image_tags_aws
 from aws_translator import translate_word
+from instagram_send import post_to_instagram_lang
 
 def extract_last_non_empty_line(text):
     # Split the text into lines and remove any trailing whitespace
@@ -20,10 +21,18 @@ def extract_last_non_empty_line(text):
         # Get the last non-empty line
         last_non_empty_line = lines[-1]
         # Get all text before the last non-empty line
-        text_before_last = '\n'.join(lines[:-1])
+        text_before_last_lines = lines[:-1]
+        
+        # Replace any line that contains both '[' and ']' with an empty line
+        for i, line in enumerate(text_before_last_lines):
+            if '[' in line and ']' in line:
+                text_before_last_lines[i] = ''
+                
+        text_before_last = '\n'.join(text_before_last_lines)
         return text_before_last, last_non_empty_line
     else:
         return '', ''
+
 
 
 def download_image(app, message):
@@ -93,7 +102,7 @@ def lambda_handler():
 
         date_str_ru = last_message_text_ru.date.strftime('%Y%m%d')
         if len(last_message_text_ru.caption_entities) > 1:
-            url_ru = last_message_text_ru.caption_entities[1]
+            url_ru = last_message_text_ru.caption_entities[1].url
         text_ru, location_ru = extract_last_non_empty_line(last_message_text_ru.caption)
         print(text_ru, location_ru, last_message_text_ru.date, url_ru, tags_ru)
    
@@ -102,18 +111,20 @@ def lambda_handler():
         date_str_ua = last_message_text_ua.date.strftime('%Y%m%d')
         text_ua, location_ua = extract_last_non_empty_line(last_message_text_ua.caption)
         if len(last_message_text_ua.caption_entities) > 1:
-                url_ua = last_message_text_ua.caption_entities[1]
+                url_ua = last_message_text_ua.caption_entities[1].url
         print(text_ua, location_ua, last_message_text_ua.date, url_ua, tags_ua)
 
         messages = app.get_chat_history(channel_id_en)
         last_message_text_en = next(messages)
         date_str_en = last_message_text_en.date.strftime('%Y%m%d')
         if len(last_message_text_en.caption_entities) > 1:
-                url_en = last_message_text_en.caption_entities[1]        
+                url_en = last_message_text_en.caption_entities[1].url    
         text_en, location_en = extract_last_non_empty_line(last_message_text_en.caption)
         print(text_en, location_en, last_message_text_en.date, url_en, tags_en)
 
 
+        if temp_file_path != None:
+            post_to_instagram_lang(temp_file_path, url_en, text_en, location_en, tags_en, 'eng')
         
 
         # Set up S3 client

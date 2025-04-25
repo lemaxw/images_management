@@ -164,8 +164,10 @@ def update_entry(ids, dbname):
     try:
         for id in ids:
             cursor.execute(query, (now, id))
-            print(f"updated poem {id}, to {now}")
-        
+            if cursor.rowcount == 0:
+                print(f"no poem with id {id}")
+            else:
+                print(f"updated poem {id}, to {now}")        
         # Commit changes to database
         conn.commit()
     except Exception as e:

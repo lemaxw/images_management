@@ -5,8 +5,10 @@ def is_inside_container():
     """
     Check if the script is running inside a container.
     You can use a more specific check based on your setup.
-    """
-    return os.path.exists('/.dockerenv') #or os.path.exists('/proc/1/cgroup')
+    """    
+    isInside = os.path.exists('/.dockerenv') or os.path.exists('/usr/src/app')
+    print(f"Running inside: {isInside}")
+    return isInside
 
 if is_inside_container():
     session = boto3.Session()  # Use default profile in container

@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var calendarEl = document.getElementById('calendar');
                 var calendar = new FullCalendar.Calendar(calendarEl, {
                     initialView: 'dayGridMonth',
+                    showNonCurrentDates: false,   // This hides the dates outside the current month
                     events: events.map((event, index) => ({
                         id: index, // Assign an ID to each event based on its array index
                         title: event.alt_ua, // or any other title logic
@@ -65,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             descriptions: event.descriptions,
                             texts: event.texts
                         }
-                    })),
+                    })),                 
                     eventContent: function(arg) {
                         let imageUrl = arg.event.extendedProps.imageurl;
                         let texts = arg.event.extendedProps.texts; // All text content
@@ -102,17 +103,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         currentIndex = parseInt(info.event.id, 10); // Get the id, which is the index in the array
                         const eventDetails = events[currentIndex]; // Use the index to retrieve full details
                         openEventPage(eventDetails);
+                    },
+                    eventDidMount: function(info) {
+                        if (!info.isStart && !info.isEnd) { // Check if event is fully in another month
+                            info.el.style.display = 'none'; 
+                        }
                     }
                 });
                 calendar.render();
                 buildIndex(events);
                 // Initialize Fuse.js with the built index
-                fuse = new Fuse(index, { keys: ['key'], threshold: 0.3 });  // Adjust threshold as needed    
+                fuse = new Fuse(index, { keys: ['key'], threshold: 0.1 });  // Adjust threshold as needed    
             });
         })
         .catch(error => console.error('Error loading events:', error)); // Error handling for the fetch operation
-        
-   
+    
+   function getAuthorKey(textObj) { 
+    if (textObj && textObj.author) {
+        const segments = textObj.author .split('.') .map(word => word.trim()) .filter(word => word.length > 1); 
+        return segments.length > 0 ? segments.pop() : null; } return null; 
+    }
+   /*
    // Build search index
    function buildIndex(images) {
         let totalImgKeys = [];
@@ -137,6 +148,46 @@ document.addEventListener('DOMContentLoaded', function() {
         totalImgKeys = [...new Set(totalImgKeys)]
         new Awesomplete(searchInput, {maxItems: 20,  list: totalImgKeys });   
     }    
+*/
+
+    function buildIndex(images) {
+        let totalImgKeys = [];
+        images.forEach((image, idx) => {
+            let imgKeys = [...image.tags.en, ...image.tags.ru, ...image.tags.ua];
+
+            // Safely add alt texts if they exist
+            if (image.alt_ru) {
+                imgKeys.push(...image.alt_ru.split(",").map(item => item.trim()));
+            }
+            if (image.alt_ua) {
+                imgKeys.push(...image.alt_ua.split(",").map(item => item.trim()));
+            }
+            if (image.alt_en) {
+                imgKeys.push(...image.alt_en.split(",").map(item => item.trim()));
+            }
+
+            // Extract and add author keys, only if they are valid strings
+            const ruAuthorKey = getAuthorKey(image.texts["ru"]);
+            const uaAuthorKey = getAuthorKey(image.texts["ua"]);
+            const enAuthorKey = getAuthorKey(image.texts["en"]);
+
+            if (ruAuthorKey) imgKeys.push(ruAuthorKey);
+            if (uaAuthorKey) imgKeys.push(uaAuthorKey);
+            if (enAuthorKey) imgKeys.push(enAuthorKey);
+
+            // Push each key into the index, guarding against empty/undefined values
+            imgKeys.forEach(key => {
+                if (typeof key === 'string' && key.trim().length > 0) {
+                    index.push({ key: key.toLowerCase(), idx: idx });
+                }
+            });
+
+            totalImgKeys.push(...imgKeys);
+        });
+
+        totalImgKeys = [...new Set(totalImgKeys)];
+        new Awesomplete(searchInput, { maxItems: 20, list: totalImgKeys }); 
+    }
 
     const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('awesomplete-selectcomplete', () => {
@@ -471,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     });
 
-    // Toggle settings menu
+   /*  // Toggle settings menu
     document.getElementById('settings-btn').addEventListener('click', function() {
         var menu = document.getElementById('settings-menu');
         if (menu.style.display === 'none' || menu.style.display === '') {
@@ -479,4 +530,4 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             menu.style.display = 'none';
         }
-    });
+    }); */

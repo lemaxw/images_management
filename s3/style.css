@@ -1,5 +1,5 @@
 .fc-daygrid-day {
-    height: 250px; /* Fixed height for all cells */
+    height: 190px; /* Fixed height for all cells */
     overflow: hidden;
 }
 
@@ -13,6 +13,14 @@
 .fc-daygrid-event {
     width: 100%;
     height: 100%;
+}
+
+.fc-other-month .fc-event-main {
+    display: none; 
+}
+
+.fc .fc-daygrid-week:has(.fc-day-other:empty) {
+    display: none;
 }
 
 .fc-daygrid-event img {        
@@ -178,11 +186,16 @@
 
 footer {
     display: flex;
+    height: 2%;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
+    padding: 5px;
     background-color: #333;
     color: #fff;
+       
+    margin: 0; /* Remove any margins */
+    padding-bottom: 2; /* Optionally remove bottom padding if the line persists */
+    outline: none; /* Remove any outline on the footer */
 }
 
 #social-media a {
@@ -233,7 +246,7 @@ footer {
     display: none;
     background-color: #f0f0f0;
     color: hsl(262, 50%, 24%);
-    padding: 20px;
+    padding: 10px;
     border-radius: 5px;
     max-width: 80%;
     max-height: 80%;
@@ -241,6 +254,7 @@ footer {
     position: fixed;
     cursor: move; /* Change cursor to indicate draggable element */
     top: 35%;
+    left: 75%
 }
 
 
@@ -264,7 +278,7 @@ footer {
 
 /* Full height for the calendar container */
 #calendar {
-    height: 95%;
+    height: 93%;
 }
 
 /* Ensure the body and html take up full height */
@@ -273,6 +287,7 @@ html, body {
     margin: 0;
     padding: 0;
     font-family: 'Roboto', sans-serif;
+    border: none; /* Remove any border on the body */
 }
 
 .fc {
@@ -359,4 +374,13 @@ html, body {
 
 .awesomplete {
     z-index: 1000; /* Ensure the autocomplete list is on top */
+  }
+
+  .awesomplete ul > li {
+    color: black; /* Change this to your preferred color */
+  }
+  
+  .awesomplete ul > li[aria-selected="true"] {
+    background-color: #d3d3d3; /* Change this to your preferred highlight color */
+    color: white; /* Highlighted text color */
   }

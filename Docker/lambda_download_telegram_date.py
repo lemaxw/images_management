@@ -13,7 +13,7 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 from rekognition_get_tags import get_image_tags_aws
 from aws_translator import translate_word
-
+from instagram_send import post_to_instagram_lang
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,10 +29,18 @@ def extract_last_non_empty_line(text):
         # Get the last non-empty line
         last_non_empty_line = lines[-1]
         # Get all text before the last non-empty line
-        text_before_last = '\n'.join(lines[:-1])
+        text_before_last_lines = lines[:-1]
+        
+        # Replace any line that contains both '[' and ']' with an empty line
+        for i, line in enumerate(text_before_last_lines):
+            if '[' in line and ']' in line:
+                text_before_last_lines[i] = ''
+                
+        text_before_last = '\n'.join(text_before_last_lines)
         return text_before_last, last_non_empty_line
     else:
         return '', ''
+
 
 
 def download_image(app, message):
@@ -75,7 +83,7 @@ def lambda_handler():
     channel_id_en = os.getenv('TELEGRAM_CHANNEL_DP_ID_EN')
     api_id =  os.getenv('TELEGRAM_API_ID')
     api_hash =  os.getenv('TELEGRAM_API_HASH')
-    phone_number = os.getenv('PHONE_NUMBER')
+    phone_number = os.getenv('PHONE_NUMBER')    
 
     app = Client("my_account", api_id=api_id, api_hash=api_hash, phone_number=phone_number)
 
@@ -93,6 +101,8 @@ def lambda_handler():
     url_en = 'none'
     url_ru = 'none'
     tags_en = tags_ua = tags_ru = None
+    temp_file_path = None
+
     for i in range(1):
         with app:        
             
@@ -108,7 +118,7 @@ def lambda_handler():
             date_str_ru = last_message_text_ru.date.strftime('%Y%m%d')
             text_ru, location_ru = extract_last_non_empty_line(last_message_text_ru.caption)
             if len(last_message_text_ru.caption_entities) > 1:
-                url_ru = last_message_text_ru.caption_entities[1]
+                url_ru = last_message_text_ru.caption_entities[1].url
             print(text_ru, location_ru, last_message_text_ru.date, url_ru, tags_ru)
     
             last_message_text_ua = next(messages_ua)
@@ -116,7 +126,7 @@ def lambda_handler():
             text_ua, location_ua = extract_last_non_empty_line(last_message_text_ua.caption)
             
             if len(last_message_text_ua.caption_entities) > 1:
-                url_ua = last_message_text_ua.caption_entities[1]
+                url_ua = last_message_text_ua.caption_entities[1].url
             print(text_ua, location_ua, last_message_text_ua.date, url_ua, tags_ua)
 
             last_message_text_en = next(messages_en)
@@ -124,9 +134,13 @@ def lambda_handler():
             text_en, location_en = extract_last_non_empty_line(last_message_text_en.caption)
             
             if len(last_message_text_en.caption_entities) > 1:
-                url_en = last_message_text_en.caption_entities[1]            
+                url_en = last_message_text_en.caption_entities[1].url      
             print(text_en, location_en, last_message_text_en.date, url_en, tags_en)
+            
+    if temp_file_path != None:
+        post_to_instagram_lang(temp_file_path, url_en, text_en, location_en, tags_en, 'eng')
 
+    exit(0)
     # Set up S3 client
     session = boto3.Session(profile_name='max')
     s3 = session.client('s3', region_name='us-east-1')  
@@ -175,10 +189,10 @@ def lambda_handler():
     # Convert the Python list back to a JSON string
     new_content = json.dumps(data, indent=4)
 
-    print(f"new_content = {new_content}")
+    print(f"new_content = {text_ru}, {text_ua}, {text_en}")
 
     
-    exit(0)
+    
     # Upload the message to S3
     s3.put_object(Body=text_ua, Bucket=bucket_name, Key=filename_ua)
     s3.put_object(Body=text_ru, Bucket=bucket_name, Key=filename_ru)

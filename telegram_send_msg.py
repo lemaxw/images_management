@@ -19,7 +19,7 @@ print (f'token={token}, channel_id={channel_id}')
 
 bot = Bot(token=token)
 
-async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,entity,rate, similarity):    
+async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,entity,rate, similarity,word_link):    
 
     found_caption=False
     poem=poem.replace("<p>", "\n")
@@ -27,9 +27,10 @@ async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,enti
     poem=poem.replace("<br>", "\n")
     poem=poem.replace("<br/>", "")
     while(found_caption == False):
-        caption = f'<i>{poem}</i>\n\n'  # Add line break for the next line
-        caption += f'<a href="{url}">{poet}</a>\n\n'
-        caption += location
+        caption = f'<b>{poem}</b>\n\n'  # Add line break for the next line
+        caption += f'[<a href="{url}">{word_link}</a>]\n\n'
+        caption += poet
+        caption += f'\n{location}'
         caption += f'\nentity:{entity}'
         caption += f'\nrate:{rate}'
         caption += f'\nid:{id}'
