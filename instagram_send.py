@@ -7,6 +7,8 @@ from instagrapi.types import Location
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 from geopy.distance import geodesic  # Import the geodesic distance function
+import boto3
+import json
 
 def is_inside_container():
     """
@@ -114,7 +116,7 @@ def get_coordinates_geopy(city: str, country: str) -> dict | None:
         print(f"Error during geocoding: {e}")
         return None
 
-def get_coordinates_instagrapi(latitude: float, longitude: float, client: Client, max_distance_miles: float = 100, min_distance_miles: float = 1 ) -> Location | None:
+def get_coordinates_instagrapi(latitude: float, longitude: float, client: Client, max_distance_miles: float = 10, min_distance_miles: float = 1 ) -> Location | None:
     """
     Finds the closest location using instagrapi within a maximum distance.
     """
@@ -156,6 +158,23 @@ def get_coordinates_instagrapi(latitude: float, longitude: float, client: Client
         print(f"Error during location search using instagrapi: {e}")
         return None
 
+def save_instagram_session(settings_data):
+    if not is_inside_container():                
+        with open("cookies.json", "w") as file:
+            json.dump(settings_data, file)
+    else:
+        ssm = boto3.client("ssm")
+        if ssm:
+            ssm.put_parameter(
+                Name="/apps/telegram-bot/INSTAGRAM_SESSION",
+                Value=json.dumps(settings_data),
+                Type="SecureString",
+                Overwrite=True
+            )
+            print("Session saved to SSM Parameter Store.")
+        else:
+            print("Error: SSM client not available, can't save session.")
+
 def post_to_instagram_lang(file_path: str, url: str, text: str, location_str: str, tags: list[str], lang: str):
     allow_instagram = os.getenv('ALLOW_INSTAGRAM')
 
@@ -171,13 +190,35 @@ def post_to_instagram_lang(file_path: str, url: str, text: str, location_str: st
         print("Error: INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD environment variables must be set.")
         return
         
+    create_new_session = False
+    client = Client()
     try:
-        client = Client()
-        client.login(login_en, pwd_en)
-        post_to_instagram(file_path, url, text, location_str, tags, client)
-        client.logout()
+        if is_inside_container():            
+            client.set_settings(json.loads(os.getenv('INSTAGRAM_SESSION')))
+        elif os.path.exists("cookies.json"):
+            client.load_settings("cookies.json")
+        else:
+            print("Error: No session file found, probably creating new session.")            
+        if client.get_timeline_feed():
+            print("✅ Session still valid!")
     except Exception as e:
-        print(f"Error: failed to create insta post: {e}")
+        print(f"Error: failed to load session: {e}")
+        create_new_session = True
+
+    if create_new_session:
+        print("Session expired, creating new session.")
+        try:
+            client = Client()
+            client.login(login_en, pwd_en)
+            print("✅ Successfully logged in to Instagram!")            
+            save_instagram_session(client.get_settings())
+        except Exception as e:
+            print(f"Error: failed to login instagram: {e}")
+            client.logout()
+            return    
+    
+    post_to_instagram(file_path, url, text, location_str, tags, client)
+
     
 
 def post_to_instagram(file_path: str, url: str, text: str, location_str: str, tags: list[str], client: Client):

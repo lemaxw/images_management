@@ -57,6 +57,7 @@ s3_client = session.client('s3', region_name='us-east-1')
 
 input_file = "/home/mpshater/images/input.txt"
 delimiter = "|"
+print(f"Start loop")
 
 with open(input_file, "r") as file:
     for line in file:
@@ -79,7 +80,7 @@ with open(input_file, "r") as file:
         else:
             resized_image_path = filename_local
 
-        
+        print(f"Uploading {resized_image_path} to S3 bucket {bucket_name}")
         try:
             s3_client.upload_file(resized_image_path, bucket_name, key)
             print(f"File {resized_image_path} uploaded as {key} to {bucket_name} successfully")

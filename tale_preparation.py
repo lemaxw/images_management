@@ -38,13 +38,12 @@ def caption_image(filepath):
     # roughly speaking: 1 token ≈ 4 chars, so for 50–150 chars use ~12–40 tokens
     output_ids = caption_model.generate(
         **inputs,
-        min_new_tokens=12,        # at least ~12 tokens (~48 chars)
+        min_new_tokens=20,        # at least ~12 tokens (~48 chars)
         max_new_tokens=40,        # at most ~40 tokens (~160 chars)
         num_beams=5,              # beam search with 5 beams for quality
-        length_penalty=1.0,       # no bias towards long/short
+        length_penalty=1.5,       # no bias towards long/short
         early_stopping=True,      # stop once beams finish
         no_repeat_ngram_size=2,   # avoid immediate n-gram repeats
-        temperature=0.7,          # a bit of randomness for “story feel”
     )
     caption = processor.decode(output_ids[0], skip_special_tokens=True)
     logging.info(f"Generated caption: {caption} for file {filepath}")
@@ -168,7 +167,7 @@ def generate_tale(location_str, caption):
     logging.info(f"Generated tale: {tale}")
     return tale
 
-def process_directory(directory, output_path="/home/mpshater/images/input.txt"):
+def process_directory(directory="/home/mpshater/images", output_path="/home/mpshater/images/input.txt"):
     """Process all JPEG files in a directory."""
     with open(output_path, "w", encoding="utf-8") as out:
         patterns = ("*.jpg", "*.jpeg", "*.JPG", "*.JPEG")
@@ -188,7 +187,4 @@ def process_directory(directory, output_path="/home/mpshater/images/input.txt"):
 
 
 if __name__ == "__main__":    
-    if len(sys.argv) < 2:
-        print("Usage: python tale_generator.py <directory_path>")
-        sys.exit(1)
-    process_directory(sys.argv[1])
+   process_directory()

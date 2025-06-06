@@ -9,6 +9,27 @@ import tempfile
 from rekognition_get_tags import get_image_tags_aws
 from aws_translator import translate_word
 from instagram_send import post_to_instagram_lang
+from botocore.exceptions import ClientError
+from typing import Tuple
+
+
+def should_publish_instagram(text: str) -> Tuple[bool, str]:
+    """
+    Inspect `text` and see if its last non-empty line is '#ping'.
+    If so, remove that line and return (True, cleaned_text).
+    Otherwise return (False, original_text).
+    """
+    lines = text.splitlines()
+    # find index of last non-empty line
+    for idx in range(len(lines) - 1, -1, -1):
+        if lines[idx].strip():
+            # if it's exactly '#ping', remove it
+            if lines[idx].strip().lower() == "#ping":
+                cleaned = "\n".join(lines[:idx] + lines[idx+1:])
+                return cleaned, True
+            break
+    return text, False
+
 
 def extract_last_non_empty_line(text):
     # Split the text into lines and remove any trailing whitespace
@@ -88,6 +109,7 @@ def lambda_handler():
     url_en = 'none'
     url_ru = 'none'
     tags_en = tags_ua = tags_ru = None
+    publish_instagram = False
 
     with app:
         messages = app.get_chat_history(channel_id_ru)
@@ -111,19 +133,21 @@ def lambda_handler():
         date_str_ua = last_message_text_ua.date.strftime('%Y%m%d')
         text_ua, location_ua = extract_last_non_empty_line(last_message_text_ua.caption)
         if len(last_message_text_ua.caption_entities) > 1:
-                url_ua = last_message_text_ua.caption_entities[1].url
+            url_ua = last_message_text_ua.caption_entities[1].url
         print(text_ua, location_ua, last_message_text_ua.date, url_ua, tags_ua)
 
         messages = app.get_chat_history(channel_id_en)
         last_message_text_en = next(messages)
         date_str_en = last_message_text_en.date.strftime('%Y%m%d')
+        
         if len(last_message_text_en.caption_entities) > 1:
-                url_en = last_message_text_en.caption_entities[1].url    
-        text_en, location_en = extract_last_non_empty_line(last_message_text_en.caption)
-        print(text_en, location_en, last_message_text_en.date, url_en, tags_en)
+            url_en = last_message_text_en.caption_entities[1].url    
+        text_en, publish_instagram = should_publish_instagram(last_message_text_en.caption)
+        text_en, location_en = extract_last_non_empty_line(text_en)
+        print(f"text_en = {text_en}, location_en = {location_en}, last_message_text_en.date = {last_message_text_en.date}, url_en = {url_en}, tags_en = {tags_en}, publish_instagram = {publish_instagram}")
 
 
-        if temp_file_path != None:
+        if publish_instagram and temp_file_path != None:
             post_to_instagram_lang(temp_file_path, url_en, text_en, location_en, tags_en, 'eng')
         
 
@@ -136,6 +160,41 @@ def lambda_handler():
         response = s3.get_object(Bucket=bucket_name, Key=object_key)
         content = response['Body'].read().decode('utf-8')
         data = json.loads(content)
+
+        # 2. If there's at least one entry, archive its assets and drop it
+        if data:
+            oldest = data.pop(0)
+
+        print(f"Remove {oldest} from S3 bucket {bucket_name} and archive it to Glacier")
+        # Build a list of keys to archive, but only if they exist
+        archive_keys = []
+
+        # top‐level fields
+        for field in ('src', 'thumb'):
+            path = oldest.get(field)
+            if path:
+                archive_keys.append(path)
+
+        # nested descriptions
+        for lang in ('ru', 'ua', 'en'):
+            descs = oldest.get('descriptions', {})
+            path = descs.get(lang)
+            if path:
+                archive_keys.append(path)
+
+        # Now archive each one
+        for key in archive_keys:
+            try:
+                s3.copy_object(
+                    CopySource={'Bucket': bucket_name, 'Key': key},
+                    Bucket=bucket_name,
+                    Key=key,
+                    StorageClass='GLACIER',
+                    MetadataDirective='COPY'
+                )
+                print(f"Archived {key} to Glacier")
+            except ClientError as e:
+                print(f"Couldn’t archive {key}: {e}")
 
         date_name= last_message_text_ua.date.strftime('%Y-%m-%d')
         image_name= f'images/{date_str_ua}.jpg'
