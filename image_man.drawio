@@ -1,0 +1,157 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0" version="27.1.4">
+  <diagram name="Page-1" id="7kYPvRK-kykXn9-Duxit">
+    <mxGraphModel dx="1226" dy="932" grid="1" gridSize="10" guides="0" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" background="none" math="0" shadow="1">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-1" target="5-WhQsy39wj2vtAEKBgs-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-24" value="Publisher&lt;div&gt;selects&amp;nbsp;&lt;/div&gt;pictures" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="5-WhQsy39wj2vtAEKBgs-23">
+          <mxGeometry x="-0.3525" y="1" relative="1" as="geometry">
+            <mxPoint x="-1" y="15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-1" value="" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="39" y="70" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-4" target="5-WhQsy39wj2vtAEKBgs-13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-35" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-4" target="5-WhQsy39wj2vtAEKBgs-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-4" value="&lt;span data-end=&quot;605&quot; data-start=&quot;551&quot;&gt;Transforms pictures into a series of Telegram posts&lt;/span&gt;*" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="150" y="190" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-36" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-5" target="5-WhQsy39wj2vtAEKBgs-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-5" value="All high-resolution images are uploaded to the S3 image bucket" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="150" y="330" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-6" value="A Lambda function creates a thumbnail for each uploaded high-resolution image" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="150" y="430" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-39" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-9" target="5-WhQsy39wj2vtAEKBgs-38">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-47" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-9" target="5-WhQsy39wj2vtAEKBgs-46">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-9" value="When the post is published, a scheduled ECS task runs at the same minute to download the poem and place it in the S3 bucket" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="546.1999999999999" y="190" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-12" value="" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.instagram;gradientColor=#DFDEDE;direction=south;" vertex="1" parent="1">
+          <mxGeometry x="562.4" y="420" width="67.6" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-57" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-13" target="5-WhQsy39wj2vtAEKBgs-56">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-13" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://cdn1.iconfinder.com/data/icons/unicons-line-vol-6/24/telegram-128.png" vertex="1" parent="1">
+          <mxGeometry x="270" y="70" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-14" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://cdn1.iconfinder.com/data/icons/unicons-line-vol-6/24/telegram-128.png" vertex="1" parent="1">
+          <mxGeometry x="680" y="70" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-19" target="5-WhQsy39wj2vtAEKBgs-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-19" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;" vertex="1" parent="1">
+          <mxGeometry x="20" y="206" width="68" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-40" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-38" target="5-WhQsy39wj2vtAEKBgs-12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="597" y="400" />
+              <mxPoint x="597" y="400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-59" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-38" target="5-WhQsy39wj2vtAEKBgs-45">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="410" />
+              <mxPoint x="720" y="410" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-38" value="The task moves images older than 1 year to S3 Glacier and republishes the English post to Instagram" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="536.1999999999999" y="330" width="270" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.655;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-14" target="5-WhQsy39wj2vtAEKBgs-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-45" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glacier;" vertex="1" parent="1">
+          <mxGeometry x="692" y="419" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-49" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-46" target="5-WhQsy39wj2vtAEKBgs-48">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-46" target="5-WhQsy39wj2vtAEKBgs-38">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="820" y="360" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="860" y="300" />
+              <mxPoint x="821" y="300" />
+              <mxPoint x="821" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-46" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#7AA116;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.bucket;" vertex="1" parent="1">
+          <mxGeometry x="830" y="196" width="75" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-53" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-48" target="5-WhQsy39wj2vtAEKBgs-52">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-48" value="" style="sketch=0;verticalLabelPosition=bottom;sketch=0;aspect=fixed;html=1;verticalAlign=top;strokeColor=none;fillColor=#000000;align=center;outlineConnect=0;pointerEvents=1;shape=mxgraph.citrix2.cloud_storefront;" vertex="1" parent="1">
+          <mxGeometry x="842.5" y="330" width="50" height="39.879999999999995" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-52" value="" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.chrome;gradientColor=#DFDEDE" vertex="1" parent="1">
+          <mxGeometry x="832.72" y="410" width="69.55" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-58" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="5-WhQsy39wj2vtAEKBgs-56" target="5-WhQsy39wj2vtAEKBgs-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-56" value="User selects the most suitable poem for the image and schedules posts in specific languages" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="70" width="230" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-72" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="180" y="580" width="670" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-74" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="5-WhQsy39wj2vtAEKBgs-72">
+          <mxGeometry x="-30" y="-30" width="700" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-61" value="For each image, extract the description and location using OpenAI Chat" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="5-WhQsy39wj2vtAEKBgs-72">
+          <mxGeometry y="5" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-62" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/ai_machine_learning/Azure_OpenAI.svg;" vertex="1" parent="5-WhQsy39wj2vtAEKBgs-72">
+          <mxGeometry x="230" y="5" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-66" value="Uses HuggingFace Sentence Transformers to match the generated image description with poems" style="whiteSpace=wrap;html=1;rounded=1;" vertex="1" parent="5-WhQsy39wj2vtAEKBgs-72">
+          <mxGeometry x="340" width="290" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-69" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://cdn1.iconfinder.com/data/icons/unicons-line-vol-6/24/telegram-128.png" vertex="1" parent="5-WhQsy39wj2vtAEKBgs-72">
+          <mxGeometry x="455" y="130" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-63" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="5-WhQsy39wj2vtAEKBgs-72" source="5-WhQsy39wj2vtAEKBgs-61" target="5-WhQsy39wj2vtAEKBgs-62">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-68" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="5-WhQsy39wj2vtAEKBgs-72" source="5-WhQsy39wj2vtAEKBgs-62" target="5-WhQsy39wj2vtAEKBgs-66">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-70" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="5-WhQsy39wj2vtAEKBgs-72" source="5-WhQsy39wj2vtAEKBgs-66" target="5-WhQsy39wj2vtAEKBgs-69">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-71" value="The closest match is published to&amp;nbsp;&lt;br&gt;an internal Telegram channel for later selection" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="5-WhQsy39wj2vtAEKBgs-70">
+          <mxGeometry x="0.0333" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5-WhQsy39wj2vtAEKBgs-73" value="* -&amp;nbsp;AI/ML Matching Engine" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="5-WhQsy39wj2vtAEKBgs-72">
+          <mxGeometry x="85" y="130" width="160" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
