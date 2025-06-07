@@ -7,7 +7,7 @@ This project streamlines the management of Telegram channels and an S3-hosted we
 ## Features
 
 - Uses AI to extract descriptions and locations from uploaded images
-- Finds the most relevant poems in Russian and Ukrainian using semantic search
+- Finds the most relevant poems in English, Russian and Ukrainian using semantic search
 - Publishes posts (image + poem) to Telegram in multiple languages
 - Uploads all high-resolution images to an S3-hosted website
 - Automatically generates image thumbnails via AWS Lambda
