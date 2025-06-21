@@ -1,10 +1,12 @@
 .fc-daygrid-day {
-    height: 190px; /* Fixed height for all cells */
-    overflow: hidden;
+    height: auto; /* or a larger fixed height if needed */
+    min-height: 190px; /* Fixed height for all cells */
+    overflow: visible;
 }
 
 .fc-daygrid-day-frame {
-    display: flex;
+    display: block; /* instead of flex */
+    padding: 5px;    /* optional: give content some breathing room */
     align-items: center; /* Center content vertically */
     justify-content: center; /* Center content horizontally */
     height: 100%;
