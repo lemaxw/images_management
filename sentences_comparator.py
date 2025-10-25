@@ -2,7 +2,7 @@ from sentence_transformers import SentenceTransformer, util
 import torch
 
 # Initialize the Sentence-BERT model
-model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+model = SentenceTransformer('all-mpnet-base-v2')
 
 def get_similar_sentences(input_statement, statements_set):
     # Encode sentences to get their embeddings

@@ -55,6 +55,19 @@ def extract_last_non_empty_line(text):
         return '', ''
 
 
+def check_message_date(message, lang):
+    """Check if message date is today. 
+       Returns (date_str, None) if valid, 
+       otherwise (None, error_response)."""
+    date_str = message.date.strftime('%Y%m%d')
+    today_str = datetime.now().strftime('%Y%m%d')
+    if date_str != today_str:
+        print(f"❌ Error: {lang} message is from {date_str}, not today ({today_str})")
+        return None, {
+            'statusCode': 200,
+            'body': json.dumps('No messages found')
+        }
+    return date_str, None
 
 def download_image(app, message):
     try:
@@ -110,10 +123,14 @@ def lambda_handler():
     url_ru = 'none'
     tags_en = tags_ua = tags_ru = None
     publish_instagram = False
+    
 
     with app:
         messages = app.get_chat_history(channel_id_ru)
         last_message_text_ru = next(messages)
+        date_str_ru, error = check_message_date(last_message_text_ru, "RU")
+        if error:
+            return error        
         temp_file_path = download_image(app, last_message_text_ru)
         if temp_file_path != None:  # Check if the message contains a photo
             tags_en = get_image_tags_aws(temp_file_path)
@@ -122,7 +139,7 @@ def lambda_handler():
                 tags_ua = translate_word(','.join(tags_en), "uk").strip().split(',')
                 #print(f"temp_file: {temp_file_path}, tags: {tags_en}, tags: {tags_ru}, tags: {tags_ua} ")                
 
-        date_str_ru = last_message_text_ru.date.strftime('%Y%m%d')
+
         if len(last_message_text_ru.caption_entities) > 1:
             url_ru = last_message_text_ru.caption_entities[1].url
         text_ru, location_ru = extract_last_non_empty_line(last_message_text_ru.caption)
@@ -130,7 +147,10 @@ def lambda_handler():
    
         messages = app.get_chat_history(channel_id_ua)
         last_message_text_ua = next(messages)
-        date_str_ua = last_message_text_ua.date.strftime('%Y%m%d')
+        date_str_ua, error = check_message_date(last_message_text_ua, "UA")
+        if error:
+            return error
+
         text_ua, location_ua = extract_last_non_empty_line(last_message_text_ua.caption)
         if len(last_message_text_ua.caption_entities) > 1:
             url_ua = last_message_text_ua.caption_entities[1].url
@@ -138,7 +158,9 @@ def lambda_handler():
 
         messages = app.get_chat_history(channel_id_en)
         last_message_text_en = next(messages)
-        date_str_en = last_message_text_en.date.strftime('%Y%m%d')
+        date_str_en, error = check_message_date(last_message_text_en, "EN")
+        if error:
+            return error
         
         if len(last_message_text_en.caption_entities) > 1:
             url_en = last_message_text_en.caption_entities[1].url    

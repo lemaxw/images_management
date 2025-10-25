@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import subprocess, json
 import piexif
 from image_manipulation import resize_image
+from db_upsert_entity import get_poems
+from sentences_comparator import get_similar_sentences
 
 # load the environment variables from the .env file
 load_dotenv()
@@ -143,7 +145,8 @@ def generate_location_from_tags(tags_info):
         "If unknown, reply 'Unknown'."
     )    
     resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+       # model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=[{"role":"user","content":prompt}]
     )
     location = resp.choices[0].message.content.strip()
@@ -151,24 +154,44 @@ def generate_location_from_tags(tags_info):
         
     return location
 
-def generate_tale(location_str, caption):
+def generate_tale(location_str, caption, entities):
     """Now feed *both* the caption and location into ChatGPT."""
+    best_score = float("-inf")
+    best_result = None
     prompt = (
+        # f"Image caption: {caption}\n"
+        # f"Location: {location_str}\n\n"
+        # "Write a super-short tale in one line (≤150 chars) "
+        # "inspired by the image content above. "
         f"Image caption: {caption}\n"
         f"Location: {location_str}\n\n"
-        "Write a super-short tale in one line (≤150 chars) "
-        "inspired by the image content above."
+        "Write a super-short, metaphorical one-line tale (≤150 chars) "
+        "that captures the mood and imagery, so it can be matched to a poem."
     )
-    resp = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role":"user","content":prompt}]
-    )
-    tale = resp.choices[0].message.content.strip()
-    logging.info(f"Generated tale: {tale}")
-    return tale
+    for attempt in range(5):
+        resp = openai.ChatCompletion.create(
+    #       model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
+            messages=[{"role":"user","content":prompt}]
+        )
+        current_tale = resp.choices[0].message.content.strip()
+        current_score = max(get_similar_sentences(current_tale, entities))
+        logging.info(f"Generated tale: {current_tale} (best similarity score: {current_score:.2f})")
+
+        if current_score > best_score:
+            best_score = current_score
+            best_tale = current_tale
+        if best_score > 0.6:
+            break
+        
+
+    return best_tale
 
 def process_directory(directory="/home/mpshater/images", output_path="/home/mpshater/images/input.txt"):
     """Process all JPEG files in a directory."""
+    poems_en =  get_poems('en')
+    entities_en = [poem['entity'] for poem in poems_en if 'entity' in poem]
+
     with open(output_path, "w", encoding="utf-8") as out:
         patterns = ("*.jpg", "*.jpeg", "*.JPG", "*.JPEG")
         for pattern in patterns:
@@ -181,7 +204,7 @@ def process_directory(directory="/home/mpshater/images", output_path="/home/mpsh
                     logging.info(f"Processing file {filepath} found following tags: {tags_info}")
                     location = generate_location_from_tags(tags_info)
                 caption = caption_image(filepath)
-                tale = generate_tale(location, caption)
+                tale = generate_tale(location, caption, entities_en)
                 print(f"{location}|{filepath}|{tale}", file=out)
 
 
