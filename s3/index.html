@@ -89,7 +89,13 @@
     </div>
 
     <footer>
-        <p>&copy; 2024 Maxim Pshater. All Rights Reserved.</p>
+        <p id="copyright">
+            © 2024–<span id="currentYear"></span> Maxim Pshater. All Rights Reserved.
+        </p>
+        
+        <script>
+            document.getElementById("currentYear").textContent = new Date().getFullYear();
+        </script>
     </footer>
 
     <script src="script.js"></script>

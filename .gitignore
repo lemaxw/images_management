@@ -1,0 +1,9 @@
+db
+__pycache__
+myenv
+Docker/my_account.session
+openai_env
+**/*.identifier
+s3/images
+s3/poems
+s3/thumbnails
