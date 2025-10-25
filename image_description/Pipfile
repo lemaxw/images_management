@@ -1,0 +1,31 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+googletrans = "==4.0.0-rc1"
+pyrogram = "*"
+openai = "*"
+tgcrypto = "*"
+psycopg2-binary = "*"
+python-dateutil = "*"
+ftfy = "*"
+regex = "*"
+tqdm = "*"
+torch = "*"
+torchvision = "*"
+clip = {git = "git+https://github.com/openai/CLIP.git"}
+python-dotenv = "*"
+aiogram = "*"
+asyncio = "*"
+beautifulsoup4 = "*"
+transformers = "*"
+sentence-transformers = "*"
+langchain = "*"
+pillow = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
