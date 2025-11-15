@@ -1,5 +1,6 @@
-import logging, sys, os, glob
+import logging, sys, os, glob, re
 import openai
+import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
@@ -7,15 +8,15 @@ from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 import subprocess, json
 import piexif
-from image_manipulation import resize_image
 from db_upsert_entity import get_poems
 from sentences_comparator import get_similar_sentences
 
 # load the environment variables from the .env file
 load_dotenv()
 # 1) load your vision‐to‐text model once
-processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-caption_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
+caption_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
+caption_model.eval()
 
 
 # Configure logging
@@ -32,22 +33,29 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def caption_image(filepath):
-    """Open the JPEG and return a one‐sentence caption."""
-    
-    img = resize_image(filepath, 512).convert("RGB")
-    inputs = processor(img, return_tensors="pt")
-    # out = caption_model.generate(**inputs, max_length=150, min_length=50)    
-    # roughly speaking: 1 token ≈ 4 chars, so for 50–150 chars use ~12–40 tokens
-    output_ids = caption_model.generate(
-        **inputs,
-        min_new_tokens=20,        # at least ~12 tokens (~48 chars)
-        max_new_tokens=40,        # at most ~40 tokens (~160 chars)
-        num_beams=5,              # beam search with 5 beams for quality
-        length_penalty=1.5,       # no bias towards long/short
-        early_stopping=True,      # stop once beams finish
-        no_repeat_ngram_size=2,   # avoid immediate n-gram repeats
-    )
-    caption = processor.decode(output_ids[0], skip_special_tokens=True)
+    """Open the JPEG and return a detailed, multi-sentence caption."""
+
+    with Image.open(filepath) as img:
+        img = img.convert("RGB")
+    prompt_text = "Describe this photograph in 2-3 vivid sentences."
+    inputs = processor(images=img, text=prompt_text, return_tensors="pt")
+    with torch.no_grad():
+        output_ids = caption_model.generate(
+            **inputs,
+            min_new_tokens=40,
+            max_new_tokens=80,
+            num_beams=5,
+            length_penalty=1.0,
+            early_stopping=True,
+            no_repeat_ngram_size=3
+        )
+    caption = processor.decode(output_ids[0], skip_special_tokens=True).strip()
+    caption = re.sub(
+        r"^\s*describe this photograph in\s*\d+\s*[-–]?\s*\d*\s*vivid sentences[.\s,-]*",
+        "",
+        caption,
+        flags=re.IGNORECASE
+    ).strip(" ,.-")
     logging.info(f"Generated caption: {caption} for file {filepath}")
     return caption
 
@@ -129,7 +137,15 @@ def reverse_geocode(coords):
         location = geolocator.reverse(f"{coords[0]}, {coords[1]}", language="en", addressdetails=True)
         if location and 'address' in location.raw:
             addr = location.raw['address']
-            city = addr.get('city') or addr.get('town') or addr.get('village') or addr.get('state')
+            city = (
+                addr.get('city')
+                or addr.get('town')
+                or addr.get('village')
+                or addr.get('hamlet')
+                or addr.get('municipality')
+                or addr.get('county')
+                or addr.get('state')
+            )
             country = addr.get('country')
             if city and country:
                 return f"{city}, {country}"
@@ -137,52 +153,87 @@ def reverse_geocode(coords):
         pass
     return None
 
-def generate_location_from_tags(tags_info):
+def generate_location_from_tags(tags_info, caption=None):
     """Ask OpenAI to infer location from tags/description."""
+    caption_clause = f"\nImage caption hint: {caption}" if caption else ""
     prompt = (
         f"Based on these photo tags and description: {tags_info}, "
         "identify the most likely city and country where the photo was taken in the format 'City, Country'. "
         "If unknown, reply 'Unknown'."
+        f"{caption_clause}\nReturn only the city and country."
     )    
     resp = openai.ChatCompletion.create(
        # model="gpt-3.5-turbo",
         model="gpt-4o-mini",
         messages=[{"role":"user","content":prompt}]
     )
-    location = resp.choices[0].message.content.strip()
-    logging.info(f"Generated location: {location}")
+    raw_location = resp.choices[0].message.content.strip()
+    first_line = raw_location.splitlines()[0].strip()
+    match = re.search(r"[A-Za-z][A-Za-z .'-]+,\s*[A-Za-z][A-Za-z .'-]+", first_line)
+    if match:
+        location = " ".join(match.group(0).split())
+    elif first_line.lower().startswith("unknown"):
+        location = "Unknown"
+    else:
+        location = "Unknown"
+    logging.info(f"Generated location: {location} (raw response: {raw_location})")
         
     return location
 
 def generate_tale(location_str, caption, entities):
+    """
+    Generate 5 one-line metaphorical tales based on image caption and location.
+    Score each tale by similarity to entities, sort them by score descending,
+    and return the best one.
+    """
+    prompt = (
+        f"Image caption: {caption}\n"
+        f"Location: {location_str}\n\n"
+        "Write 5 metaphorical, super-short one-line tales (≤150 chars each), "
+        "inspired by the image above. Return each tale on a separate line."
+    )
+
+    resp = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    # Split response into individual tales
+    tales = [line.strip("-•0123456789. ").strip() for line in resp.choices[0].message.content.strip().split("\n") if line.strip()]
+    
+    scored_tales = []
+    for tale in tales:
+        score = max(get_similar_sentences(tale, entities))
+        scored_tales.append((tale, score))
+        logging.info(f"Tale: {tale} (Score: {score:.2f})")
+
+    # Sort tales by score descending
+    scored_tales.sort(key=lambda x: x[1], reverse=True)
+
+    # Optionally: print top tales
+    for idx, (tale, score) in enumerate(scored_tales, 1):
+        print(f"{idx}. [{score:.2f}] {tale}")
+
+    best_tale = scored_tales[0][0] if scored_tales else ""
+    return best_tale
+
+
+def select_tale(captions):
     """Now feed *both* the caption and location into ChatGPT."""
     best_score = float("-inf")
     best_result = None
-    prompt = (
-        # f"Image caption: {caption}\n"
-        # f"Location: {location_str}\n\n"
-        # "Write a super-short tale in one line (≤150 chars) "
-        # "inspired by the image content above. "
-        f"Image caption: {caption}\n"
-        f"Location: {location_str}\n\n"
-        "Write a super-short, metaphorical one-line tale (≤150 chars) "
-        "that captures the mood and imagery, so it can be matched to a poem."
-    )
-    for attempt in range(5):
-        resp = openai.ChatCompletion.create(
-    #       model="gpt-3.5-turbo",
-            model="gpt-4o-mini",
-            messages=[{"role":"user","content":prompt}]
-        )
-        current_tale = resp.choices[0].message.content.strip()
+
+    poems_en =  get_poems('en')
+    entities = [poem['entity'] for poem in poems_en if 'entity' in poem]
+
+    for attempt in range(0,4):
+        current_tale = captions[attempt]
         current_score = max(get_similar_sentences(current_tale, entities))
         logging.info(f"Generated tale: {current_tale} (best similarity score: {current_score:.2f})")
 
         if current_score > best_score:
             best_score = current_score
             best_tale = current_tale
-        if best_score > 0.6:
-            break
         
 
     return best_tale
@@ -196,14 +247,14 @@ def process_directory(directory="/home/mpshater/images", output_path="/home/mpsh
         patterns = ("*.jpg", "*.jpeg", "*.JPG", "*.JPEG")
         for pattern in patterns:
             for filepath in glob.glob(os.path.join(directory, pattern)):
+                caption = caption_image(filepath)
                 coords = get_gps_coords(filepath)
                 if coords:
                     location = reverse_geocode(coords) or "Unknown"
                 else:
                     tags_info = get_xmp_tags(filepath) or "No tags available"
                     logging.info(f"Processing file {filepath} found following tags: {tags_info}")
-                    location = generate_location_from_tags(tags_info)
-                caption = caption_image(filepath)
+                    location = generate_location_from_tags(tags_info, caption)
                 tale = generate_tale(location, caption, entities_en)
                 print(f"{location}|{filepath}|{tale}", file=out)
 
@@ -211,3 +262,6 @@ def process_directory(directory="/home/mpshater/images", output_path="/home/mpsh
 
 if __name__ == "__main__":    
    process_directory()
+   #select_tale(["Smoke curls between gold and stone, carrying whispers of ancient trade.","A thousand colors rest in shadow, waiting for the sun to stir them awake.",
+#"The alley hums with quiet footsteps and the scent of brass and spice.", "Trinkets gleam like small suns in the cool heart of the market.", 
+#"Every arch and lantern tells a story that time forgot to close."])
