@@ -6,6 +6,8 @@ let currentPage = 1;
 const itemsPerPage = 20;
 let searchResults = []; // Global variable to store search results
 let query = ""
+const poemCache = new Map();
+let textLangs = [];
 
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -14,107 +16,11 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             currentIndex = 0;
-            events = data;  // Store the fetched events in the higher scope array                    
-
-            // Prefetch all text files
-            const fetchTextPromises = events.map(event => {
-                const descriptions = event.descriptions;
-                const languages = ["ru", "ua", "en"];
-                const textPromises = languages.map(lang => {
-                    if (descriptions[lang]) {
-                        const textUrl = descriptions[lang];
-                        return fetch(textUrl)
-                            .then(response => response.text())
-                            .then(text => ({ lang, text }))
-                            .catch(error => {
-                                console.error(`Error fetching the description for ${lang}:`, error);
-                                return null; // Return null in case of error
-                            });
-                    }
-                });
-                return Promise.all(textPromises).then(texts => {
-                    event.texts = texts.reduce((acc, result) => {
-                        if (result) { // Check if result is not null
-                            const { lang, text } = result;
-
-                            // Split the text by newline and extract the second-to-last element as the author
-                            const lines = text.split('\n').filter(line => line.trim() !== '');
-                            const author = lines[lines.length - 1]; // Get the n-1 element 
-                            acc[lang] = { text, author }; // Include the author in the accumulator
-
-                            //acc[lang] = text;
-                        }
-                        return acc;
-                    }, {});
-                });
-            });
-
-            // Once all text files are fetched, initialize the calendar
-            Promise.all(fetchTextPromises).then(() => {
-                var calendarEl = document.getElementById('calendar');
-                var calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'dayGridMonth',
-                    showNonCurrentDates: false,   // This hides the dates outside the current month
-                    events: events.map((event, index) => ({
-                        id: index, // Assign an ID to each event based on its array index
-                        title: event.alt_ua, // or any other title logic
-                        title_ru: event.alt_ru,
-                        start: event.eventDate,
-                        imageurl: event.thumb,
-                        extendedProps: {
-                            src: event.src,
-                            descriptions: event.descriptions,
-                            texts: event.texts
-                        }
-                    })),                 
-                    eventContent: function(arg) {
-                        let imageUrl = arg.event.extendedProps.imageurl;
-                        let texts = arg.event.extendedProps.texts; // All text content
-                        let languages = ["ru", "ua", "en"];
-                        let currentIndexOfText = 0;
-
-                        let element = document.createElement('div');
-                        element.className = 'event-element';
-
-                        let imageElement = document.createElement('img');
-                        imageElement.src = imageUrl;
-                        imageElement.className = 'event-image';
-                        element.appendChild(imageElement); 
-
-                        let textElement = document.createElement('div');                        
-                        textElement.innerText = texts[languages[currentIndexOfText]];
-                        textElement.className = 'event-text';
-                        textElement.style.display = 'none';
-                        element.appendChild(textElement);
-
-                        element.addEventListener('mouseenter', function() {
-                            currentIndexOfText = (currentIndexOfText + 1) % Object.keys(texts).length;
-                            textElement.innerText = texts[languages[currentIndexOfText]].text;
-                            textElement.style.display = 'block';
-                        });
-
-                        element.addEventListener('mouseleave', function() {
-                            textElement.style.display = 'none';
-                        });
-                        
-                        return { domNodes: [element] };
-                    },
-                    eventClick: function(info) {
-                        currentIndex = parseInt(info.event.id, 10); // Get the id, which is the index in the array
-                        const eventDetails = events[currentIndex]; // Use the index to retrieve full details
-                        openEventPage(eventDetails);
-                    },
-                    eventDidMount: function(info) {
-                        if (!info.isStart && !info.isEnd) { // Check if event is fully in another month
-                            info.el.style.display = 'none'; 
-                        }
-                    }
-                });
-                calendar.render();
-                buildIndex(events);
-                // Initialize Fuse.js with the built index
-                fuse = new Fuse(index, { keys: ['key'], threshold: 0.1 });  // Adjust threshold as needed    
-            });
+            events = data.map(event => ({ ...event, texts: event.texts || {} }));  // Store the fetched events in the higher scope array                    
+            renderCalendar(events);
+            buildIndex(events);
+            // Initialize Fuse.js with the built index
+            fuse = new Fuse(index, { keys: ['key'], threshold: 0.1 });  // Adjust threshold as needed    
         })
         .catch(error => console.error('Error loading events:', error)); // Error handling for the fetch operation
     
@@ -123,32 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const segments = textObj.author .split('.') .map(word => word.trim()) .filter(word => word.length > 1); 
         return segments.length > 0 ? segments.pop() : null; } return null; 
     }
-   /*
-   // Build search index
-   function buildIndex(images) {
-        let totalImgKeys = [];
-        images.forEach((image, idx) => {
-            let imgKeys = [...image.tags.en, ...image.tags.ru, ...image.tags.ua];
-
-            // Safely add alt texts if they exist
-            if (image.alt_ru) imgKeys.push(...image.alt_ru.split(",").map(item => item.trim()));
-            if (image.alt_ua) imgKeys.push(...image.alt_ua.split(",").map(item => item.trim()));
-            if (image.alt_en) imgKeys.push(...image.alt_en.split(",").map(item => item.trim()));
-
-            if (image.texts["ru"] && image.texts["ru"].author) imgKeys.push(image.texts["ru"].author.split('.').map(word => word.trim()).filter(word => word.length > 1).pop());
-            if (image.texts["ua"] && image.texts["ua"].author) imgKeys.push(image.texts["ua"].author.split('.').map(word => word.trim()).filter(word => word.length > 1).pop());
-            if (image.texts["en"] && image.texts["en"].author) imgKeys.push(image.texts["en"].author.split('.').map(word => word.trim()).filter(word => word.length > 1).pop());
-
-            // Push each key with corresponding index into the array
-            imgKeys.forEach(key => {
-                index.push({ key: key.toLowerCase(), idx: idx });
-            });
-            totalImgKeys.push(...imgKeys);
-        });   
-        totalImgKeys = [...new Set(totalImgKeys)]
-        new Awesomplete(searchInput, {maxItems: 20,  list: totalImgKeys });   
-    }    
-*/
+   
 
     function buildIndex(images) {
         let totalImgKeys = [];
@@ -187,6 +68,92 @@ document.addEventListener('DOMContentLoaded', function() {
 
         totalImgKeys = [...new Set(totalImgKeys)];
         new Awesomplete(searchInput, { maxItems: 20, list: totalImgKeys }); 
+    }
+
+    function renderCalendar(events) {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            showNonCurrentDates: false,   // This hides the dates outside the current month
+            events: events.map((event, index) => ({
+                id: index, // Assign an ID to each event based on its array index
+                title: event.alt_ua, // or any other title logic
+                title_ru: event.alt_ru,
+                start: event.eventDate,
+                imageurl: event.thumb,
+                extendedProps: {
+                    src: event.src,
+                    descriptions: event.descriptions,
+                    texts: event.texts,
+                    titles: {
+                        ru: event.alt_ru,
+                        ua: event.alt_ua,
+                        en: event.alt_en
+                    }
+                }
+            })),                 
+            eventContent: function(arg) {
+                let imageUrl = arg.event.extendedProps.imageurl;
+                let texts = arg.event.extendedProps.texts || {}; // All text content
+                let titles = arg.event.extendedProps.titles || {};
+                let languages = ["ru", "ua", "en"];
+                let currentIndexOfText = 0;
+                const eventData = events[arg.event.id];
+
+                let element = document.createElement('div');
+                element.className = 'event-element';
+
+                let imageElement = document.createElement('img');
+                imageElement.src = imageUrl;
+                imageElement.className = 'event-image';
+                imageElement.loading = 'lazy';
+                imageElement.decoding = 'async';
+                element.appendChild(imageElement); 
+
+                let textElement = document.createElement('div');                        
+                textElement.innerText = titles[languages[currentIndexOfText]] || '';
+                textElement.className = 'event-text';
+                textElement.style.display = 'none';
+                element.appendChild(textElement);
+
+                element.addEventListener('mouseenter', function() {
+                    currentIndexOfText = (currentIndexOfText + 1) % languages.length;
+                    let lang = languages[currentIndexOfText];
+                    const showText = () => {
+                        let textValue = (texts[lang] && texts[lang].text) || titles[lang] || '';
+                        textElement.innerText = textValue;
+                        textElement.style.display = 'block';
+                    };
+                    if (texts && Object.keys(texts).length) {
+                        showText();
+                    } else {
+                        loadEventTexts(eventData).then(loaded => {
+                            texts = loaded;
+                            showText();
+                        }).catch(() => {
+                            showText();
+                        });
+                    }
+                });
+
+                element.addEventListener('mouseleave', function() {
+                    textElement.style.display = 'none';
+                });
+                
+                return { domNodes: [element] };
+            },
+            eventClick: function(info) {
+                currentIndex = parseInt(info.event.id, 10); // Get the id, which is the index in the array
+                const eventDetails = events[currentIndex]; // Use the index to retrieve full details
+                openEventPage(eventDetails);
+            },
+            eventDidMount: function(info) {
+                if (!info.isStart && !info.isEnd) { // Check if event is fully in another month
+                    info.el.style.display = 'none'; 
+                }
+            }
+        });
+        calendar.render();
     }
 
     const searchInput = document.getElementById('searchInput');
@@ -293,6 +260,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             let thumb = document.createElement('img');
             thumb.src = image.thumb;
+            thumb.loading = 'lazy';
+            thumb.decoding = 'async';
             thumb.alt = image.alt_en || "Image";
             thumb.addEventListener('click', () => {
                 currentIndex = currInd++;
@@ -410,13 +379,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     let texts = [];
-    let btnTexts = ["стихи", "вірші", "poems"];
+    let btnTexts = { ru: "стихи", ua: "вірші", en: "poems" };
     let currentLangIndex = 0;
     function changeText() {
+        if (!texts.length || !textLangs.length) return;
         const modalTitle = document.getElementById('modal-title-ua');        
         const poemBtn = document.getElementById('poem-btn');
         modalTitle.textContent = texts[currentLangIndex];
-        poemBtn.textContent = btnTexts[currentLangIndex];
+        const lang = textLangs[currentLangIndex];
+        poemBtn.textContent = btnTexts[lang] || "poems";
         currentLangIndex = (currentLangIndex + 1) % texts.length;
     }
 
@@ -430,6 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Set image and modal title attributes
             img.src = loadedImg.src;
             texts = [];        
+            textLangs = [];
                     
             
             modalTitleDate.textContent = details.eventDate;
@@ -439,18 +411,26 @@ document.addEventListener('DOMContentLoaded', function() {
             img.onload = adjustLayout;
         
             // Set and fetch descriptions
-            var i=0;        
-            handleLinkAndDescription(details, texts, i++, 'ru');
-            handleLinkAndDescription(details, texts, i++, 'ua');
-            handleLinkAndDescription(details, texts, i++, 'en');
-            currentLangIndex = 0;
-            changeText();
-            if (!timer) {
-                setInterval(changeText, 10000);
-                timer = true;
-            }
-            // Show the modal
-            modal.style.display = 'flex';            
+            loadEventTexts(details).then(loadedTexts => {
+                handleLinkAndDescription(details, texts, 'ru', loadedTexts);
+                handleLinkAndDescription(details, texts, 'ua', loadedTexts);
+                handleLinkAndDescription(details, texts, 'en', loadedTexts);
+                currentLangIndex = 0;
+                if (texts.length) {
+                    changeText();
+                    document.getElementById('poem-btn').style.display = '';
+                    if (!timer) {
+                        setInterval(changeText, 10000);
+                        timer = true;
+                    }
+                } else {
+                    document.getElementById('poem-btn').style.display = 'none';
+                    const poemTable = document.getElementById('poem-table');
+                    poemTable.style.display = 'none';
+                }
+                // Show the modal
+                modal.style.display = 'flex';            
+            });
         }).catch(error => {
             alert(error.message);
         });
@@ -458,29 +438,90 @@ document.addEventListener('DOMContentLoaded', function() {
 
     }
 
-    function handleLinkAndDescription(details, texts, i, lang) {
+    function handleLinkAndDescription(details, texts, lang, loadedTexts) {
         const element = document.getElementById(`link-${lang}`);
-        if (details.descriptions && details.descriptions[`${lang}_link`]) {
-            element.href = details.descriptions[`${lang}_link`];
+        const langText = loadedTexts && loadedTexts[lang] && loadedTexts[lang].text;
+        if (langText) {
+            const rawLink = details.descriptions && details.descriptions[`${lang}_link`];
+            const link = normalizeLink(rawLink);
+            if (link) {
+                element.href = link;
+                element.target = "_blank";
+                element.style.pointerEvents = 'auto';
+                element.style.cursor = 'pointer';
+            } else {
+                element.removeAttribute('href');
+                element.style.pointerEvents = 'none';
+                element.style.cursor = 'default';
+            }
             element.style.display = '';
-            texts[i] = details[`alt_${lang}`];
-            fetchDescription(details.descriptions[lang], element);
+            element.innerText = langText;
+            texts.push(details[`alt_${lang}`]);
+            textLangs.push(lang);
         } else {
             element.style.display = 'none';
-            return;
         }
     }
 
+    function normalizeLink(rawLink) {
+        if (!rawLink) return '';
+        if (typeof rawLink === 'string' && rawLink.trim().startsWith('{')) {
+            try {
+                const parsed = JSON.parse(rawLink);
+                if (parsed && parsed.url) return parsed.url;
+            } catch (e) {
+                console.warn('Failed to parse link json', rawLink);
+                return '';
+            }
+        }
+        return rawLink;
+    }
 
-    function fetchDescription(url, element) {
-        fetch(url)
-            .then(response => response.text())
-            .then(text => {
-                element.innerText = text;
-            })
-            .catch(error => {
-                console.error('Error fetching the description:', error);
-            });
+    function loadEventTexts(details) {
+        if (details.texts && Object.keys(details.texts).length) {
+            return Promise.resolve(details.texts);
+        }
+        if (!details.descriptions) {
+            return Promise.resolve({});
+        }
+        const languages = ["ru", "ua", "en"];
+        const textPromises = languages.map(lang => {
+            const textUrl = details.descriptions[lang];
+            if (!textUrl) return null;
+            const cacheKey = `${details.eventDate}-${lang}`;
+            if (poemCache.has(cacheKey)) {
+                return poemCache.get(cacheKey);
+            }
+            const fetchPromise = fetch(textUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error(`Failed to load ${lang} text`);
+                    return response.text();
+                })
+                .then(text => ({ lang, text, author: extractAuthor(text) }))
+                .catch(error => {
+                    console.error(`Error fetching the description for ${lang}:`, error);
+                    return null; // Return null in case of error
+                });
+            poemCache.set(cacheKey, fetchPromise);
+            return fetchPromise;
+        }).filter(Boolean);
+
+        return Promise.all(textPromises).then(texts => {
+            const textMap = texts.reduce((acc, result) => {
+                if (result) {
+                    const { lang, text, author } = result;
+                    acc[lang] = { text, author };
+                }
+                return acc;
+            }, {});
+            details.texts = textMap;
+            return textMap;
+        });
+    }
+
+    function extractAuthor(text) {
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        return lines[lines.length - 1] || '';
     }
 
     dragElement(document.getElementById("poem-table"));
@@ -521,13 +562,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     });
-
-   /*  // Toggle settings menu
-    document.getElementById('settings-btn').addEventListener('click', function() {
-        var menu = document.getElementById('settings-menu');
-        if (menu.style.display === 'none' || menu.style.display === '') {
-            menu.style.display = 'block';
-        } else {
-            menu.style.display = 'none';
-        }
-    }); */
