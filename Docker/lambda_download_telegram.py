@@ -6,6 +6,11 @@ from datetime import datetime
 import json
 from collections import OrderedDict
 import tempfile
+# # Get the parent directory
+# parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# # Add the parent directory to sys.path
+# sys.path.insert(0, parent_dir)
+
 from rekognition_get_tags import get_image_tags_aws
 from aws_translator import translate_word
 from instagram_send import post_to_instagram_lang
@@ -57,17 +62,14 @@ def extract_last_non_empty_line(text):
 
 def check_message_date(message, lang):
     """Check if message date is today. 
-       Returns (date_str, None) if valid, 
-       otherwise (None, error_response)."""
+       Returns (date_str, True) if valid, 
+       otherwise (today_str, False) but does not abort processing."""
     date_str = message.date.strftime('%Y%m%d')
     today_str = datetime.now().strftime('%Y%m%d')
     if date_str != today_str:
         print(f"❌ Error: {lang} message is from {date_str}, not today ({today_str})")
-        return None, {
-            'statusCode': 200,
-            'body': json.dumps('No messages found')
-        }
-    return date_str, None
+        return today_str, False
+    return date_str, True
 
 def download_image(app, message):
     try:
@@ -112,7 +114,8 @@ def lambda_handler():
 
     app = Client("my_account", api_id=api_id, api_hash=api_hash, phone_number=phone_number)
 
-    date_str_en = date_str_ua = date_str_ru = datetime.now()
+    today_str = datetime.now().strftime('%Y%m%d')
+    date_str_en = date_str_ua = date_str_ru = today_str
     
     # Process updates to find the latest message from the specific channel
     last_message_text_ru = None
@@ -121,51 +124,55 @@ def lambda_handler():
     url_ua = 'none'
     url_en = 'none'
     url_ru = 'none'
-    tags_en = tags_ua = tags_ru = None
+    tags_en = []
+    tags_ua = []
+    tags_ru = []
     publish_instagram = False
+    temp_file_path = None
+    text_ru = text_ua = text_en = ""
+    location_ru = location_ua = location_en = ""
     
 
     with app:
         messages = app.get_chat_history(channel_id_ru)
         last_message_text_ru = next(messages)
-        date_str_ru, error = check_message_date(last_message_text_ru, "RU")
-        if error:
-            return error        
-        temp_file_path = download_image(app, last_message_text_ru)
-        if temp_file_path != None:  # Check if the message contains a photo
-            tags_en = get_image_tags_aws(temp_file_path)
-            if tags_en != None:
-                tags_ru = translate_word(','.join(tags_en), "ru").strip().split(',')
-                tags_ua = translate_word(','.join(tags_en), "uk").strip().split(',')
-                #print(f"temp_file: {temp_file_path}, tags: {tags_en}, tags: {tags_ru}, tags: {tags_ua} ")                
+        date_str_ru, is_ru_today = check_message_date(last_message_text_ru, "RU")
+        if is_ru_today:
+            temp_file_path = download_image(app, last_message_text_ru)
+            if temp_file_path != None:  # Check if the message contains a photo
+                tags_en = get_image_tags_aws(temp_file_path)
+                if tags_en != None:
+                    tags_ru = translate_word(','.join(tags_en), "ru").strip().split(',')
+                    tags_ua = translate_word(','.join(tags_en), "uk").strip().split(',')
+                    #print(f"temp_file: {temp_file_path}, tags: {tags_en}, tags: {tags_ru}, tags: {tags_ua} ")                
 
 
-        if len(last_message_text_ru.caption_entities) > 1:
-            url_ru = last_message_text_ru.caption_entities[1].url
-        text_ru, location_ru = extract_last_non_empty_line(last_message_text_ru.caption)
+            if len(last_message_text_ru.caption_entities) > 1:
+                url_ru = last_message_text_ru.caption_entities[1].url
+            text_ru, location_ru = extract_last_non_empty_line(last_message_text_ru.caption)
         print(text_ru, location_ru, last_message_text_ru.date, url_ru, tags_ru)
    
         messages = app.get_chat_history(channel_id_ua)
         last_message_text_ua = next(messages)
-        date_str_ua, error = check_message_date(last_message_text_ua, "UA")
-        if error:
-            return error
+        date_str_ua, is_ua_today = check_message_date(last_message_text_ua, "UA")
 
-        text_ua, location_ua = extract_last_non_empty_line(last_message_text_ua.caption)
-        if len(last_message_text_ua.caption_entities) > 1:
-            url_ua = last_message_text_ua.caption_entities[1].url
+        if is_ua_today:
+            text_ua, location_ua = extract_last_non_empty_line(last_message_text_ua.caption)
+            if len(last_message_text_ua.caption_entities) > 1:
+                url_ua = last_message_text_ua.caption_entities[1].url
         print(text_ua, location_ua, last_message_text_ua.date, url_ua, tags_ua)
 
         messages = app.get_chat_history(channel_id_en)
         last_message_text_en = next(messages)
-        date_str_en, error = check_message_date(last_message_text_en, "EN")
-        if error:
-            return error
+        date_str_en, is_en_today = check_message_date(last_message_text_en, "EN")
         
-        if len(last_message_text_en.caption_entities) > 1:
-            url_en = last_message_text_en.caption_entities[1].url    
-        text_en, publish_instagram = should_publish_instagram(last_message_text_en.caption)
-        text_en, location_en = extract_last_non_empty_line(text_en)
+        if is_en_today:
+            if len(last_message_text_en.caption_entities) > 1:
+                url_en = last_message_text_en.caption_entities[1].url    
+            text_en, publish_instagram = should_publish_instagram(last_message_text_en.caption)
+            text_en, location_en = extract_last_non_empty_line(text_en)
+        else:
+            publish_instagram = False
         print(f"text_en = {text_en}, location_en = {location_en}, last_message_text_en.date = {last_message_text_en.date}, url_en = {url_en}, tags_en = {tags_en}, publish_instagram = {publish_instagram}")
 
 
@@ -218,15 +225,29 @@ def lambda_handler():
             except ClientError as e:
                 print(f"Couldn’t archive {key}: {e}")
 
-        date_name= last_message_text_ua.date.strftime('%Y-%m-%d')
+        date_name= datetime.strptime(date_str_ua, '%Y%m%d').strftime('%Y-%m-%d')
         image_name= f'images/{date_str_ua}.jpg'
         thumb_name= f'thumbnails/{date_str_ua}.jpg'
         filename_ua = f'poems/{date_str_ua}_ua.txt'
         filename_ru = f'poems/{date_str_ru}_ru.txt'
         filename_en = f'poems/{date_str_en}_en.txt'
 
+        # Build descriptions only for languages that have text
+        descriptions = {}
+        if text_ru:
+            descriptions["ru"] = filename_ru
+            if url_ru and url_ru != "none":
+                descriptions["ru_link"] = url_ru
+        if text_ua:
+            descriptions["ua"] = filename_ua
+            if url_ua and url_ua != "none":
+                descriptions["ua_link"] = url_ua
+        if text_en:
+            descriptions["en"] = filename_en
+            if url_en and url_en != "none":
+                descriptions["en_link"] = url_en
+
         # Add a new element to the array (append to end of the list)
-        
         data.append(
             {   
                 "eventDate": f"{date_name}",
@@ -235,14 +256,7 @@ def lambda_handler():
                 "alt_ru": f"{location_ru}",
                 "alt_ua": f"{location_ua}",
                 "alt_en": f"{location_en}",
-                "descriptions": {
-                    "ru": f"{filename_ru}",
-                    "ru_link": f"{url_ru}",
-                    "ua": f"{filename_ua}",
-                    "ua_link": f"{url_ua}",
-                    "en": f"{filename_en}",
-                    "en_link": f"{url_en}"
-                },
+                "descriptions": descriptions,
                 "tags": {
                     "en": f"{tags_en}",
                     "ua": f"{tags_ua}",
@@ -257,10 +271,13 @@ def lambda_handler():
 
         
         
-        # Upload the message to S3
-        s3.put_object(Body=text_ua, Bucket=bucket_name, Key=filename_ua)
-        s3.put_object(Body=text_ru, Bucket=bucket_name, Key=filename_ru)
-        s3.put_object(Body=text_en, Bucket=bucket_name, Key=filename_en)
+        # Upload the message to S3 only when present
+        if text_ua:
+            s3.put_object(Body=text_ua, Bucket=bucket_name, Key=filename_ua)
+        if text_ru:
+            s3.put_object(Body=text_ru, Bucket=bucket_name, Key=filename_ru)
+        if text_en:
+            s3.put_object(Body=text_en, Bucket=bucket_name, Key=filename_en)
         s3.put_object(Body=new_content, Bucket=bucket_name, Key=object_key)
 
     return {

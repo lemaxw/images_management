@@ -13,11 +13,11 @@ set -euo pipefail
 #   export AWS_PROFILE=max
 #   ./deploy.sh
 # -----------------------------------------------------------------------------
-# Load environment variables from .env, if it exists in this folder
+# Load environment variables from ~/.env, if it exists
 # -----------------------------------------------------------------------------
-if [[ -f "~/.env" ]]; then
+if [[ -f "$HOME/.env" ]]; then
   # This strips out comments/empty lines and exports KEY=VALUE pairs
-  export $(grep -v '^#' ~/.env | xargs)
+  export $(grep -v '^#' "$HOME/.env" | xargs)
 fi
 # Verify that AWS_ACCOUNT_ID is set
 if [[ -z "${AWS_ACCOUNT_ID:-}" ]]; then
