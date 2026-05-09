@@ -1,0 +1,27 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": "[]",
+            "env": {
+                "TELEGRAM_CHANNEL_DP_ID_RU": "@daypicture",
+                "TELEGRAM_CHANNEL_DP_ID_UA": "@daypictureua",
+                "TELEGRAM_CHANNEL_DP_ID_EN": "@PicturesPoems",
+                "TELEGRAM_API_ID": "23634711",
+                "TELEGRAM_API_HASH": "4ed3d4698ebe4567c726dfc3aec012b5",
+                "PHONE_NUMBER": "972547537140",
+                "AWS_ACCESS_KEY_ID": "212810157789",
+                "AWS_SECRET_ACCESS_KEY": "your_secret_key",
+                "AWS_DEFAULT_REGION": "us-east-1"
+            }
+        }
+    ]
+}

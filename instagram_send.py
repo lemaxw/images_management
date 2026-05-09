@@ -1,14 +1,15 @@
-from instagrapi import Client
 import os, sys
 import random
 import requests
 from instagrapi import Client
 from instagrapi.types import Location
+from instagrapi.exceptions import BadPassword, ChallengeRequired, TwoFactorRequired
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 from geopy.distance import geodesic  # Import the geodesic distance function
 import boto3
 import json
+import re
 
 def is_inside_container():
     """
@@ -175,6 +176,56 @@ def save_instagram_session(settings_data):
         else:
             print("Error: SSM client not available, can't save session.")
 
+def load_instagram_session(client: Client) -> bool:
+    """
+    Try to load an existing session into `client`.
+    Returns True when a session source exists, False otherwise.
+    """
+    if is_inside_container():
+        session_json = os.getenv("INSTAGRAM_SESSION")
+        if session_json:
+            client.set_settings(json.loads(session_json))
+            return True
+        return False
+
+    if os.path.exists("cookies.json"):
+        client.load_settings("cookies.json")
+        print("Loaded Instagram session from cookies.json")
+        return True
+    return False
+
+def get_instagram_session_settings() -> dict | None:
+    """
+    Return stored session settings (for stable device ids), or None.
+    """
+    try:
+        if is_inside_container():
+            session_json = os.getenv("INSTAGRAM_SESSION")
+            if session_json:
+                return json.loads(session_json)
+            return None
+        if os.path.exists("cookies.json"):
+            with open("cookies.json", "r") as file:
+                return json.load(file)
+    except Exception as e:
+        print(f"Warning: failed to read stored Instagram session settings: {e}")
+    return None
+
+def _looks_like_instagram_version(value: str) -> bool:
+    # Instagram app versions often look like 269.0.0.18.75
+    return bool(re.fullmatch(r"\d+\.\d+\.\d+\.\d+\.\d+", value))
+
+def _is_true(value: str | None) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+def _normalize_secret(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if len(normalized) >= 2 and normalized[0] == normalized[-1] and normalized[0] in {"'", '"'}:
+        normalized = normalized[1:-1].strip()
+    return normalized
+
 def post_to_instagram_lang(file_path: str, url: str, text: str, location_str: str, tags: list[str], lang: str):
     allow_instagram = os.getenv('ALLOW_INSTAGRAM')
 
@@ -183,38 +234,59 @@ def post_to_instagram_lang(file_path: str, url: str, text: str, location_str: st
         return
 
     if lang == 'eng':
-        login_en = os.getenv('INSTAGRAM_VERSES_LOGIN_EN')
-        pwd_en = os.getenv('INSTAGRAM_VERSES_PWD_EN')
+        login_en = _normalize_secret(os.getenv('INSTAGRAM_VERSES_LOGIN_EN'))
+        pwd_en = _normalize_secret(os.getenv('INSTAGRAM_VERSES_PWD_EN'))
 
     if not login_en or not pwd_en:
         print("Error: INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD environment variables must be set.")
         return
         
-    create_new_session = False
+    create_new_session = _is_true(os.getenv("INSTAGRAM_FORCE_RELOGIN"))
     client = Client()
-    try:
-        if is_inside_container():            
-            client.set_settings(json.loads(os.getenv('INSTAGRAM_SESSION')))
-        elif os.path.exists("cookies.json"):
-            client.load_settings("cookies.json")
-        else:
-            print("Error: No session file found, probably creating new session.")            
-        if client.get_timeline_feed():
-            print("✅ Session still valid!")
-    except Exception as e:
-        print(f"Error: failed to load session: {e}")
-        create_new_session = True
+    if create_new_session:
+        print("INSTAGRAM_FORCE_RELOGIN is enabled. Skipping saved session.")
+    else:
+        try:
+            has_session = load_instagram_session(client)
+            if not has_session:
+                print("Error: No session found, creating new session.")
+                create_new_session = True
+            if client.get_timeline_feed():
+                print("✅ Session still valid!")
+        except Exception as e:
+            print(f"Error: failed to load session: {e}")
+            create_new_session = True
 
     if create_new_session:
         print("Session expired, creating new session.")
         try:
+            stored_settings = get_instagram_session_settings()
             client = Client()
+            if stored_settings:
+                # Reuse known device identifiers to reduce login risk on IG side.
+                client.set_settings(stored_settings)
             client.login(login_en, pwd_en)
             print("✅ Successfully logged in to Instagram!")            
             save_instagram_session(client.get_settings())
+        except BadPassword:
+            print("Error: Instagram rejected username/password.")
+            print("Check that INSTAGRAM_VERSES_PWD_EN in AWS is updated to the new password.")
+            print("If password is correct, this AWS IP may be blocked/trusted-check required.")
+            print("Recommended: set INSTAGRAM_FORCE_RELOGIN=True and create a fresh trusted session from a residential IP first.")
+            return
+        except ChallengeRequired:
+            print("Error: Instagram challenge required for this login (new device/IP).")
+            print("Approve the challenge in the Instagram app, then retry.")
+            return
+        except TwoFactorRequired:
+            print("Error: Instagram account requires 2FA for this login.")
+            print("Complete 2FA manually/trusted session flow, then retry.")
+            return
         except Exception as e:
             print(f"Error: failed to login instagram: {e}")
-            client.logout()
+            match = re.search(r"\d+\.\d+\.\d+\.\d+\.\d+", str(e))
+            if match and _looks_like_instagram_version(match.group(0)):
+                print(f"Note: '{match.group(0)}' is Instagram app version in user-agent, not an IP address.")
             return    
     
     post_to_instagram(file_path, url, text, location_str, tags, client)
@@ -332,4 +404,3 @@ if __name__ == '__main__':
     # Test posting (commented out to prevent accidental posts):
     # post_to_instagram(example_file_path, example_url, example_text, example_location, example_tags, client)
     # client.logout()
-

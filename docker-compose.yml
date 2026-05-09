@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15
+    image: postgres:15.4-bookworm
     restart: always
     volumes:
       - ./db:/var/lib/postgresql/data
