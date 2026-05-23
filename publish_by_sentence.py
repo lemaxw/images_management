@@ -1,5 +1,6 @@
 import asyncio
 import sys
+from pathlib import Path
 from db_upsert_entity import get_poems
 from telegram_send_msg import send_telegram_message
 from sentences_comparator import get_similar_sentences
@@ -44,7 +45,7 @@ def process_file(just_print=False):
 
     print(f"got {len(entities_ua)} entities for ua, {len(entities_ru)} entities for ru")
 
-    input_file = "/home/mpshater/images/input.txt"
+    input_file = Path.home() / "images" / "input.txt"
     # Define the delimiter as a regular expression pattern
     delimiter = "|"
 

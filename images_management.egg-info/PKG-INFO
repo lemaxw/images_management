@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: images-management
+Version: 0.1.0
+Summary: Image management and analysis tools
+Requires-Python: >=3.11
+Requires-Dist: image2json @ file:///home/lemaxw/hobby/image2json
+Requires-Dist: openai
+Requires-Dist: transformers
+Requires-Dist: torch
+Requires-Dist: pillow
+Requires-Dist: python-dotenv
+Requires-Dist: requests
+Requires-Dist: beautifulsoup4
+Requires-Dist: boto3
+Requires-Dist: geopy
+Requires-Dist: piexif
+Requires-Dist: aiogram
+Requires-Dist: psycopg2-binary

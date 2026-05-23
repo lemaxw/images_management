@@ -3,6 +3,7 @@ import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError
 from PIL import Image
 import os
+from pathlib import Path
 
 def prompt_next_weekdays():
     def find_next_tuesday():
@@ -55,7 +56,7 @@ start_date = prompt_next_weekdays()
 session = boto3.Session(profile_name='max')
 s3_client = session.client('s3', region_name='us-east-1')
 
-input_file = "/home/mpshater/images/input.txt"
+input_file = Path.home() / "images" / "input.txt"
 delimiter = "|"
 print(f"Start loop")
 

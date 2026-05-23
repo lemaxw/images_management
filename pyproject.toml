@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "images-management"
+version = "0.1.0"
+description = "Image management and analysis tools"
+requires-python = ">=3.11"
+dependencies = [
+    # Local dependencies
+    "image2json @ file:///home/lemaxw/hobby/image2json",
+    
+    # Core dependencies (ML packages handled by existing venv)
+    "openai",
+    "transformers",
+    "torch",
+    "pillow",
+    "python-dotenv",
+    "requests",
+    "beautifulsoup4",
+    "boto3",
+    "geopy",
+    "piexif",
+    
+    # Additional dependencies for other scripts
+    "aiogram",
+    "psycopg2-binary",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]

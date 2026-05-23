@@ -3,6 +3,7 @@ from PIL import Image
 import io
 import os
 import base64
+from pathlib import Path
 
 from dotenv import load_dotenv
 # load the environment variables from the .env file
@@ -46,6 +47,6 @@ def get_image_tags(image_path):
     # Extract and return the tags from the API response
 
 # Example usage
-image_path = '/home/mpshater/images/20230813_194643.jpg'
+image_path = Path.home() / "images" / "20230813_194643.jpg"
 tags = get_image_tags(image_path)
 print("Generated Tags:", tags)

@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+Docker/lambda_download_telegram.py
+Docker/lambda_download_telegram_date.py
+images_management.egg-info/PKG-INFO
+images_management.egg-info/SOURCES.txt
+images_management.egg-info/dependency_links.txt
+images_management.egg-info/requires.txt
+images_management.egg-info/top_level.txt
+lambda/lambda_function.py
+myenv/bin/activate_this.py
+myenv/bin/jp.py

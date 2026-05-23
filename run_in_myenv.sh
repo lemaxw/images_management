@@ -17,6 +17,9 @@ if [ ! -d "$VENV_PATH" ]; then
   exit 1
 fi
 
+# Add image2json to PYTHONPATH
+export PYTHONPATH="/home/lemaxw/hobby/image2json/src:${PYTHONPATH:-}"
+
 # activate venv
 source "$VENV_PATH/bin/activate"
 

@@ -1,6 +1,7 @@
 import tensorflow as tf
 from PIL import Image
 import numpy as np
+from pathlib import Path
 
 # Load weights from .npy file
 weights_dict = np.load("/home/mpshater/hobby/Show_and_Tell/model/39999.npy", allow_pickle=True).item()
@@ -36,7 +37,7 @@ model = tf.keras.Sequential([
 
 
 # Prepare your image
-image_path = "/home/mpshater/images/20230815_065849.jpg"
+image_path = Path.home() / "images" / "20230815_065849.jpg"
 image = Image.open(image_path)
 image = np.array(image.resize((299, 299))) / 255.0  # resizing and normalization
 image = np.expand_dims(image, axis=0)  # expand dimensions for batch size

@@ -1,0 +1,13 @@
+image2json @ file:///home/lemaxw/hobby/image2json
+openai
+transformers
+torch
+pillow
+python-dotenv
+requests
+beautifulsoup4
+boto3
+geopy
+piexif
+aiogram
+psycopg2-binary

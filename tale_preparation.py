@@ -1,4 +1,5 @@
 import logging, sys, os, glob, re
+from pathlib import Path
 import openai
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
@@ -13,10 +14,72 @@ from sentences_comparator import get_similar_sentences
 
 # load the environment variables from the .env file
 load_dotenv()
-# 1) load your vision‐to‐text model once
-processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
-caption_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
-caption_model.eval()
+
+# Caption backend interface
+class CaptionBackend:
+    """Abstract base class for image captioning backends."""
+    def caption_image(self, filepath: str) -> str:
+        """Generate caption for image at filepath."""
+        raise NotImplementedError
+
+
+class BlipCaptionBackend(CaptionBackend):
+    """BLIP-based image captioning backend."""
+    def __init__(self):
+        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
+        self.model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
+        self.model.eval()
+    
+    def caption_image(self, filepath: str) -> str:
+        """Open the JPEG and return a detailed, multi-sentence caption."""
+        with Image.open(filepath) as img:
+            img = img.convert("RGB")
+        prompt_text = "Describe this photograph in 2-3 vivid sentences."
+        inputs = self.processor(images=img, text=prompt_text, return_tensors="pt")
+        with torch.no_grad():
+            output_ids = self.model.generate(
+                **inputs,
+                min_new_tokens=40,
+                max_new_tokens=80,
+                num_beams=5,
+                length_penalty=1.0,
+                early_stopping=True,
+                no_repeat_ngram_size=3
+            )
+        caption = self.processor.decode(output_ids[0], skip_special_tokens=True).strip()
+        caption = re.sub(
+            r"^\s*describe this photograph in\s*\d+\s*[-–]?\s*\d*\s*vivid sentences[.\s,-]*",
+            "",
+            caption,
+            flags=re.IGNORECASE
+        ).strip(" ,.-")
+        logging.info(f"Generated caption: {caption} for file {filepath}")
+        return caption
+
+
+class Image2JsonCaptionBackend(CaptionBackend):
+    """image2json-based image captioning backend."""
+    def __init__(self):
+        try:
+            from image2json.analyzer import ImageAnalyzer
+            from image2json.config import AnalysisConfig
+            config = AnalysisConfig(short_version=True)
+            self.analyzer = ImageAnalyzer(config=config)
+        except ImportError as e:
+            logging.error(f"Failed to import image2json: {e}")
+            raise
+    
+    def caption_image(self, filepath: str) -> str:
+        """Generate caption using image2json."""
+        try:
+            analysis = self.analyzer.analyze_path(Path(filepath))
+            # Use detailed_description if it exists and is not empty, otherwise fall back to summary
+            caption = analysis.detailed_description if analysis.detailed_description else analysis.summary
+            logging.info(f"Generated caption: {caption} for file {filepath}")
+            return caption
+        except Exception as e:
+            logging.error(f"Failed to generate caption with image2json: {e}")
+            raise
 
 
 # Configure logging
@@ -32,32 +95,30 @@ logging.basicConfig(
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
-def caption_image(filepath):
-    """Open the JPEG and return a detailed, multi-sentence caption."""
+def get_caption_backend(backend_name: str = None) -> CaptionBackend:
+    """Get caption backend by name. Defaults to BLIP."""
+    if backend_name is None:
+        backend_name = os.getenv("CAPTION_BACKEND", "image2json").lower()
+    
+    if backend_name == "blip":
+        return BlipCaptionBackend()
+    elif backend_name == "image2json":
+        return Image2JsonCaptionBackend()
+    else:
+        logging.warning(f"Unknown backend '{backend_name}', defaulting to BLIP")
+        return BlipCaptionBackend()
 
-    with Image.open(filepath) as img:
-        img = img.convert("RGB")
-    prompt_text = "Describe this photograph in 2-3 vivid sentences."
-    inputs = processor(images=img, text=prompt_text, return_tensors="pt")
-    with torch.no_grad():
-        output_ids = caption_model.generate(
-            **inputs,
-            min_new_tokens=40,
-            max_new_tokens=80,
-            num_beams=5,
-            length_penalty=1.0,
-            early_stopping=True,
-            no_repeat_ngram_size=3
-        )
-    caption = processor.decode(output_ids[0], skip_special_tokens=True).strip()
-    caption = re.sub(
-        r"^\s*describe this photograph in\s*\d+\s*[-–]?\s*\d*\s*vivid sentences[.\s,-]*",
-        "",
-        caption,
-        flags=re.IGNORECASE
-    ).strip(" ,.-")
-    logging.info(f"Generated caption: {caption} for file {filepath}")
-    return caption
+
+def caption_image(filepath, backend: CaptionBackend = None):
+    """Open the JPEG and return a detailed, multi-sentence caption.
+    
+    Args:
+        filepath: Path to the image file
+        backend: Optional CaptionBackend instance. If None, uses backend from CAPTION_BACKEND env var or defaults to BLIP.
+    """
+    if backend is None:
+        backend = get_caption_backend()
+    return backend.caption_image(filepath)
 
 def get_xmp_tags(filepath):
     """
@@ -238,8 +299,11 @@ def select_tale(captions):
 
     return best_tale
 
-def process_directory(directory="/home/mpshater/images", output_path="/home/mpshater/images/input.txt"):
+def process_directory(directory=None, output_path=None):
     """Process all JPEG files in a directory."""
+    images_dir = Path.home() / "images"
+    directory = Path(directory) if directory is not None else images_dir
+    output_path = Path(output_path) if output_path is not None else images_dir / "input.txt"
     poems_en =  get_poems('en')
     entities_en = [poem['entity'] for poem in poems_en if 'entity' in poem]
 

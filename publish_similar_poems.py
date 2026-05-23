@@ -1,4 +1,5 @@
 import asyncio, os
+from pathlib import Path
 
 from PIL import Image
 from db_upsert_entity import get_poems
@@ -35,7 +36,7 @@ entities_ru = [poem['entity'] for poem in poems_ru if 'entity' in poem]
 print(f"got {len(entities_ua)} entities for ua, {len(entities_ru)} entities for ru")
 
 # Preprocess the image
-dir_path = "/home/mpshater/images"
+dir_path = Path.home() / "images"
 for path in os.listdir(dir_path):
     if path.endswith(".jpg"):
         image_path=os.path.join(dir_path, path)
@@ -45,4 +46,3 @@ for path in os.listdir(dir_path):
         publish_similarities(image, entities_ua, poems_ua)
         publish_similarities(image, entities_ru, poems_ru)
  
-

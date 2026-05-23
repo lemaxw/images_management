@@ -10,6 +10,7 @@ from geopy.distance import geodesic  # Import the geodesic distance function
 import boto3
 import json
 import re
+from pathlib import Path
 
 def is_inside_container():
     """
@@ -387,7 +388,7 @@ if __name__ == '__main__':
 
     example_text = "FOLLOW thy fair sun, unhappy shadow!...\n\n[Full poem]\n\nThomas Campion"
     example_url = "https://www.example.com/fullpoem"  # URL for the bio
-    example_file_path = "/home/mpshater/images/20241008_084807-2.jpg"  # Replace!
+    example_file_path = str(Path.home() / "images" / "20241008_084807-2.jpg")  # Replace!
     example_tags = ["poetry", "ThomasCampion", "poem", "literature"]
     example_location = 'Beer Sheva, Israel'
 
