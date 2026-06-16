@@ -1,6 +1,6 @@
-import logging, sys, os, glob, re
+import logging, sys, os, re
 from pathlib import Path
-import openai
+import requests
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
@@ -83,16 +83,42 @@ class Image2JsonCaptionBackend(CaptionBackend):
 
 
 # Configure logging
+LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING").upper()
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, LOG_LEVEL, logging.WARNING),
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout)  # Log to console
     ]
 )
 
-# Ensure your OpenAI API key is set:
-openai.api_key = os.getenv("OPENAI_API_KEY")
+OLLAMA_URL = os.getenv("OLLAMA_URL") or os.getenv("IMAGE2JSON_URL") or "http://localhost:11434"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL") or os.getenv("IMAGE2JSON_TEXT_MODEL") or "qwen3:14b"
+OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT") or os.getenv("IMAGE2JSON_TIMEOUT") or "300")
+
+
+def call_ollama(
+    prompt: str,
+    *,
+    model: str | None = None,
+    timeout: int | None = None,
+    temperature: float = 0.2,
+) -> str:
+    """Call the local Ollama text model and return plain response text."""
+    payload = {
+        "model": model or OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "think": False,
+        "keep_alive": 0,
+        "options": {"temperature": temperature},
+    }
+    url = f"{OLLAMA_URL.rstrip('/')}/api/generate"
+    response = requests.post(url, json=payload, timeout=timeout or OLLAMA_TIMEOUT)
+    response.raise_for_status()
+    text = response.json().get("response", "")
+    text = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", text.strip(), flags=re.MULTILINE)
+    return text.strip()
 
 
 def get_caption_backend(backend_name: str = None) -> CaptionBackend:
@@ -215,7 +241,7 @@ def reverse_geocode(coords):
     return None
 
 def generate_location_from_tags(tags_info, caption=None):
-    """Ask OpenAI to infer location from tags/description."""
+    """Ask the local Ollama text model to infer location from tags/description."""
     caption_clause = f"\nImage caption hint: {caption}" if caption else ""
     prompt = (
         f"Based on these photo tags and description: {tags_info}, "
@@ -223,12 +249,7 @@ def generate_location_from_tags(tags_info, caption=None):
         "If unknown, reply 'Unknown'."
         f"{caption_clause}\nReturn only the city and country."
     )    
-    resp = openai.ChatCompletion.create(
-       # model="gpt-3.5-turbo",
-        model="gpt-4o-mini",
-        messages=[{"role":"user","content":prompt}]
-    )
-    raw_location = resp.choices[0].message.content.strip()
+    raw_location = call_ollama(prompt)
     first_line = raw_location.splitlines()[0].strip()
     match = re.search(r"[A-Za-z][A-Za-z .'-]+,\s*[A-Za-z][A-Za-z .'-]+", first_line)
     if match:
@@ -243,40 +264,132 @@ def generate_location_from_tags(tags_info, caption=None):
 
 def generate_tale(location_str, caption, entities):
     """
-    Generate 5 one-line metaphorical tales based on image caption and location.
-    Score each tale by similarity to entities, sort them by score descending,
-    and return the best one.
+    Generate one-line metaphorical tales based on image caption and location,
+    then return the top unique matched poem entities.
+    First generate 5 independent batches of 10 tales. Then use the best 10
+    candidates for up to 2 improvement rounds, stopping if a round does not
+    improve the best score. Print the final top 5 entities.
     """
-    prompt = (
-        f"Image caption: {caption}\n"
-        f"Location: {location_str}\n\n"
-        "Write 5 metaphorical, super-short one-line tales (≤150 chars each), "
-        "inspired by the image above. Return each tale on a separate line."
-    )
+    initial_loops = 5
+    improvement_loops = 2
+    batch_size = 10
+    improvement_batch_size = 20
+    top_size = 5
+    seed_size = 10
+    target_theme_size = 20
 
-    resp = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
+    def score_against_entities(text):
+        if not entities:
+            return 0.0, ""
+        scores = get_similar_sentences(text, entities)
+        best_idx, best_score = max(enumerate(scores), key=lambda item: item[1])
+        return best_score, entities[best_idx]
 
-    # Split response into individual tales
-    tales = [line.strip("-•0123456789. ").strip() for line in resp.choices[0].message.content.strip().split("\n") if line.strip()]
-    
-    scored_tales = []
-    for tale in tales:
-        score = max(get_similar_sentences(tale, entities))
-        scored_tales.append((tale, score))
-        logging.info(f"Tale: {tale} (Score: {score:.2f})")
+    context = f"{caption} {location_str}".strip()
+    target_themes = []
+    if entities and context:
+        context_scores = get_similar_sentences(context, entities)
+        ranked_context = sorted(enumerate(context_scores), key=lambda item: item[1], reverse=True)
+        target_themes = [(entities[idx], score) for idx, score in ranked_context[:target_theme_size]]
+        logging.info("Top target themes from image context:")
+        for idx, (theme, score) in enumerate(target_themes[:10], 1):
+            logging.info(f"{idx}. [{score:.2f}] {theme}")
 
-    # Sort tales by score descending
-    scored_tales.sort(key=lambda x: x[1], reverse=True)
+    def target_theme_text(limit=10):
+        if not target_themes:
+            return "No target themes available."
+        return "\n".join(f"- {theme}" for theme, _ in target_themes[:limit])
 
-    # Optionally: print top tales
-    for idx, (tale, score) in enumerate(scored_tales, 1):
-        print(f"{idx}. [{score:.2f}] {tale}")
+    def build_initial_prompt():
+        return (
+            f"Image caption: {caption}\n"
+            f"Location: {location_str}\n"
+            "Target poem themes to aim toward:\n"
+            f"{target_theme_text(12)}\n\n"
+            f"Write {batch_size} metaphorical, one-line tales (< 300 chars each), "
+            "inspired by the image. Each tale should connect the visible image to one target theme. "
+            "Use concrete words from the target themes when they fit naturally. "
+            "Return each tale on a separate line, with no explanation."
+        )
 
-    best_tale = scored_tales[0][0] if scored_tales else ""
-    return best_tale
+    def build_improvement_prompt(top_tales):
+        top_lines = "\n".join(
+            f"- [{score:.2f} vs '{matched_entity}'] {tale}"
+            for tale, (score, matched_entity) in top_tales
+        )
+        return (
+            f"Image caption: {caption}\n"
+            f"Location: {location_str}\n\n"
+            "Target poem themes to aim toward:\n"
+            f"{target_theme_text(15)}\n\n"
+            "Current best tales:\n"
+            f"{top_lines}\n\n"
+            f"Write {improvement_batch_size} better one-line tales (< 300 chars each). "
+            "Move each new tale closer to one target theme or to the matched theme shown beside a current best tale. "
+            "Keep the image visible, use stronger shared vocabulary, and do not repeat existing tales exactly. "
+            "Return each tale on a separate line, with no explanation."
+        )
+
+    def parse_tales(raw_tales):
+        tales = []
+        for line in raw_tales.split("\n"):
+            tale = line.strip("-•0123456789. )\t").strip()
+            if tale:
+                tales.append(tale)
+        return tales
+
+    scored_by_tale = {}
+    best_by_entity = {}
+    seen = set()
+
+    def add_tales(tales, stage, loop_idx):
+        for tale in tales:
+            normalized = " ".join(tale.lower().split())
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            score, matched_entity = score_against_entities(tale)
+            scored_by_tale[tale] = (score, matched_entity)
+            if matched_entity:
+                entity_key = " ".join(matched_entity.lower().split())
+                existing = best_by_entity.get(entity_key)
+                if existing is None or score > existing[1]:
+                    best_by_entity[entity_key] = (matched_entity, score, tale)
+            logging.info(f"{stage} {loop_idx}: Tale: {tale} (Score: {score:.2f}, Entity: {matched_entity})")
+
+    def sorted_tales():
+        return sorted(scored_by_tale.items(), key=lambda x: x[1][0], reverse=True)
+
+    for loop_idx in range(1, initial_loops + 1):
+        add_tales(parse_tales(call_ollama(build_initial_prompt(), temperature=0.7)), "Initial", loop_idx)
+        best_score = sorted_tales()[0][1][0] if scored_by_tale else 0.0
+        logging.info(f"Initial {loop_idx}: best tale score so far: {best_score:.2f}")
+
+    for loop_idx in range(1, improvement_loops + 1):
+        previous_best = sorted_tales()[0][1][0] if scored_by_tale else 0.0
+        top_tales = sorted_tales()[:seed_size]
+        if not top_tales:
+            break
+        add_tales(parse_tales(call_ollama(build_improvement_prompt(top_tales), temperature=0.35)), "Improve", loop_idx)
+        current_best = sorted_tales()[0][1][0] if scored_by_tale else 0.0
+        logging.info(f"Improve {loop_idx}: best tale score changed from {previous_best:.2f} to {current_best:.2f}")
+        if current_best <= previous_best:
+            logging.info("Stopping improvement because best score did not improve.")
+            break
+
+    for theme, score in target_themes:
+        if len(best_by_entity) >= top_size:
+            break
+        entity_key = " ".join(theme.lower().split())
+        if entity_key not in best_by_entity:
+            best_by_entity[entity_key] = (theme, score, context)
+
+    scored_entities = sorted(best_by_entity.values(), key=lambda x: x[1], reverse=True)
+
+    for idx, (entity, score, tale) in enumerate(scored_entities[:top_size], 1):
+        print(f"{idx}. [{score:.2f}] {entity}  <- {tale}")
+
+    return [entity for entity, _, _ in scored_entities[:top_size]]
 
 
 def select_tale(captions):
@@ -299,28 +412,66 @@ def select_tale(captions):
 
     return best_tale
 
+def _iter_image_paths(directory):
+    suffixes = {".jpg", ".jpeg"}
+    return sorted(
+        (
+            path
+            for path in Path(directory).iterdir()
+            if path.is_file() and path.suffix.lower() in suffixes
+        ),
+        key=lambda path: path.name.lower(),
+    )
+
 def process_directory(directory=None, output_path=None):
     """Process all JPEG files in a directory."""
     images_dir = Path.home() / "images"
     directory = Path(directory) if directory is not None else images_dir
-    output_path = Path(output_path) if output_path is not None else images_dir / "input.txt"
-    poems_en =  get_poems('en')
-    entities_en = [poem['entity'] for poem in poems_en if 'entity' in poem]
+    output_dir = Path(output_path).parent if output_path is not None else images_dir
+    languages = {
+        "ua": {
+            "label": "Ukrainian",
+            "output": output_dir / "input_ua",
+            "poems": get_poems("ua"),
+        },
+        "ru": {
+            "label": "Russian",
+            "output": output_dir / "input_ru",
+            "poems": get_poems("ru"),
+        },
+        "en": {
+            "label": "English",
+            "output": output_dir / "input_en",
+            "poems": get_poems("en"),
+        },
+    }
+    for cfg in languages.values():
+        cfg["entities"] = [poem["entity"] for poem in cfg["poems"] if poem.get("entity")]
 
-    with open(output_path, "w", encoding="utf-8") as out:
-        patterns = ("*.jpg", "*.jpeg", "*.JPG", "*.JPEG")
-        for pattern in patterns:
-            for filepath in glob.glob(os.path.join(directory, pattern)):
-                caption = caption_image(filepath)
-                coords = get_gps_coords(filepath)
-                if coords:
-                    location = reverse_geocode(coords) or "Unknown"
-                else:
-                    tags_info = get_xmp_tags(filepath) or "No tags available"
-                    logging.info(f"Processing file {filepath} found following tags: {tags_info}")
-                    location = generate_location_from_tags(tags_info, caption)
-                tale = generate_tale(location, caption, entities_en)
-                print(f"{location}|{filepath}|{tale}", file=out)
+    with (
+        open(languages["en"]["output"], "w", encoding="utf-8") as out_en,
+        open(languages["ru"]["output"], "w", encoding="utf-8") as out_ru,
+        open(languages["ua"]["output"], "w", encoding="utf-8") as out_ua,
+    ):
+        outputs = {"en": out_en, "ru": out_ru, "ua": out_ua}
+        for filepath in _iter_image_paths(directory):
+            filepath = str(filepath)
+            caption = caption_image(filepath)
+            tags_info = get_xmp_tags(filepath) or "No tags available"
+            coords = get_gps_coords(filepath)
+            if coords:
+                location = reverse_geocode(coords) or "Unknown"
+            else:
+                logging.info(f"Processing file {filepath} found following tags: {tags_info}")
+                location = generate_location_from_tags(tags_info, caption)
+            print(f"\nImage: {Path(filepath).name}")
+            print(f"Caption: {caption}")
+            print(f"Tags: {tags_info}")
+            for lang, cfg in languages.items():
+                print(f"{cfg['label']} top entities:")
+                entities = generate_tale(location, caption, cfg["entities"])
+                for entity in entities:
+                    print(f"{location}|{filepath}|{entity}", file=outputs[lang])
 
 
 

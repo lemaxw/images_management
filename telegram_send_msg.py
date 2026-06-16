@@ -19,7 +19,7 @@ print (f'token={token}, channel_id={channel_id}')
 
 bot = Bot(token=token)
 
-async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,entity,rate, similarity,word_link):    
+async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,entity,rate, generated_tale_score,word_link):    
 
     found_caption=False
     poem=poem.replace("<p>", "\n")
@@ -34,7 +34,7 @@ async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,enti
         caption += f'\nentity:{entity}'
         caption += f'\nrate:{rate}'
         caption += f'\nid:{id}'
-        caption += f'\nsimilarity:{similarity:.2f}'
+        caption += f'\ngenerated tale score:{generated_tale_score:.2f}'
         
         if(len(caption) > 1076):
             poem = poem[:(int(len(poem)/2))] + "\n..."

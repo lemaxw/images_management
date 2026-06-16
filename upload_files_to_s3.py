@@ -52,52 +52,61 @@ def log_image_size(image_path, description):
     file_size_mb = os.path.getsize(image_path) / (1024 * 1024)
     print(f"{description} size: {file_size_mb:.2f} MB")
 
+
+def iter_image_paths(directory):
+    suffixes = {".jpg", ".jpeg"}
+    return sorted(
+        (
+            path
+            for path in Path(directory).iterdir()
+            if path.is_file() and path.suffix.lower() in suffixes
+        ),
+        key=lambda path: path.name.lower(),
+    )
+
+
 start_date = prompt_next_weekdays()
 session = boto3.Session(profile_name='max')
 s3_client = session.client('s3', region_name='us-east-1')
 
-input_file = Path.home() / "images" / "input.txt"
-delimiter = "|"
+images_dir = Path.home() / "images"
 print(f"Start loop")
 
-with open(input_file, "r") as file:
-    for line in file:
-        parts = line.strip().split(delimiter)
-        location = parts[0]
-        filename_local = parts[1]
-                
-        bucket_name = 'daypicture.lemaxw.xyz'
-        key = start_date.strftime('images/%Y%m%d.jpg')
+for image_path in iter_image_paths(images_dir):
+    filename_local = str(image_path)
 
-        log_image_size(filename_local, "Original image")
+    bucket_name = 'daypicture.lemaxw.xyz'
+    key = start_date.strftime('images/%Y%m%d.jpg')
 
-        if should_resize(filename_local):
-            resized_image_path = resize_image(filename_local, quality=85)
-            log_image_size(resized_image_path, "Resized image")
-            if os.path.getsize(resized_image_path)  > os.path.getsize(filename_local):
-                resized_image_path = filename_local
-                print("original image smaller than resized, keep original")
-            
-        else:
+    log_image_size(filename_local, "Original image")
+
+    if should_resize(filename_local):
+        resized_image_path = resize_image(filename_local, quality=85)
+        log_image_size(resized_image_path, "Resized image")
+        if os.path.getsize(resized_image_path) > os.path.getsize(filename_local):
             resized_image_path = filename_local
+            print("original image smaller than resized, keep original")
 
-        print(f"Uploading {resized_image_path} to S3 bucket {bucket_name}")
-        try:
-            s3_client.upload_file(resized_image_path, bucket_name, key)
-            print(f"File {resized_image_path} uploaded as {key} to {bucket_name} successfully")
-        except FileNotFoundError:
-            print("The file was not found at", resized_image_path)
-        except NoCredentialsError:
-            print("Credentials not available")
-        except PartialCredentialsError:
-            print("Incomplete credentials")
-        except ClientError as e:
-            if e.response['Error']['Code'] == '404':
-                print("The specified bucket does not exist")
-            else:
-                print("Unexpected error:", e)
-        
-        if resized_image_path != filename_local:
-            os.remove(resized_image_path)
+    else:
+        resized_image_path = filename_local
 
-        start_date = start_date + timedelta(days=1)
+    print(f"Uploading {resized_image_path} to S3 bucket {bucket_name}")
+    try:
+        s3_client.upload_file(resized_image_path, bucket_name, key)
+        print(f"File {resized_image_path} uploaded as {key} to {bucket_name} successfully")
+    except FileNotFoundError:
+        print("The file was not found at", resized_image_path)
+    except NoCredentialsError:
+        print("Credentials not available")
+    except PartialCredentialsError:
+        print("Incomplete credentials")
+    except ClientError as e:
+        if e.response['Error']['Code'] == '404':
+            print("The specified bucket does not exist")
+        else:
+            print("Unexpected error:", e)
+
+    if resized_image_path != filename_local:
+        os.remove(resized_image_path)
+
+    start_date = start_date + timedelta(days=1)
