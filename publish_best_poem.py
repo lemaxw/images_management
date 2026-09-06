@@ -1,10 +1,15 @@
 import asyncio
+import json
+import os
 import re
 import sys
+import time
+from collections import defaultdict
+from contextlib import contextmanager
 from pathlib import Path
 
 from aws_translator import translate_word
-from db_upsert_entity import get_poems
+from db_upsert_entity import get_poems, get_recent_first_place_ids, record_first_place
 from tale_preparation import (
     call_ollama,
     caption_image,
@@ -14,8 +19,45 @@ from tale_preparation import (
     get_xmp_tags,
     reverse_geocode,
 )
-from sentences_comparator import get_similar_sentences
+from sentences_comparator import SentenceMatcher
 from telegram_send_msg import send_telegram_message
+
+
+class TimingStats:
+    """Collect and print elapsed time for the expensive publishing stages."""
+
+    def __init__(self, enabled=None):
+        if enabled is None:
+            enabled = os.getenv("PUBLISH_TIMING", "1").lower() not in ("0", "false", "no")
+        self.enabled = enabled
+        self.slow_threshold = float(os.getenv("PUBLISH_TIMING_SLOW_THRESHOLD_SECONDS", "5"))
+        self._stats = defaultdict(lambda: [0, 0.0])
+        self.started_at = time.perf_counter()
+
+    @contextmanager
+    def measure(self, name):
+        started_at = time.perf_counter()
+        try:
+            yield
+        finally:
+            if self.enabled:
+                elapsed = time.perf_counter() - started_at
+                stat = self._stats[name]
+                stat[0] += 1
+                stat[1] += elapsed
+                if self.slow_threshold > 0 and elapsed >= self.slow_threshold:
+                    print(f"[timing] {name}: {elapsed:.2f}s")
+
+    def report(self):
+        if not self.enabled:
+            return
+        elapsed = time.perf_counter() - self.started_at
+        print("\nTiming summary:")
+        for name, (count, total) in sorted(
+            self._stats.items(), key=lambda item: item[1][1], reverse=True
+        ):
+            print(f"  {name:<32} {total:8.2f}s  calls={count:<3} avg={total / count:7.2f}s")
+        print(f"  {'total wall time':<32} {elapsed:8.2f}s")
 
 
 def _normalize_entity(entity):
@@ -46,31 +88,45 @@ def _poems_by_id(poems):
     return {str(poem.get("id")): poem for poem in poems if poem.get("id") is not None}
 
 
-def select_top_poem_ids(location_str, caption, poems):
+def select_top_poem_ids(
+    location_str,
+    caption,
+    poems,
+    timings=None,
+    timing_prefix="selection",
+    target_poems=None,
+    entity_matcher=None,
+    excluded_first_ids=None,
+):
     """
     Select top poem IDs for one image. Generation is used only to bridge image
     context to poem entities; final publishing resolves exact poems by ID.
     """
-    initial_loops = 5
-    improvement_loops = 2
-    batch_size = 10
-    improvement_batch_size = 20
-    top_size = 5
+    initial_loops = int(os.getenv("PUBLISH_INITIAL_LOOPS", "2"))
+    improvement_loops = int(os.getenv("PUBLISH_IMPROVEMENT_LOOPS", "1"))
+    batch_size = int(os.getenv("PUBLISH_INITIAL_BATCH_SIZE", "10"))
+    improvement_batch_size = int(os.getenv("PUBLISH_IMPROVEMENT_BATCH_SIZE", "20"))
+    top_size = int(os.getenv("PUBLISH_TOP_SIZE", "5"))
     seed_size = 10
     target_theme_size = 20
 
-    target_poems = _best_unique_entity_poems(poems)
+    target_poems = target_poems or _best_unique_entity_poems(poems)
+    excluded_first_ids = {str(poem_id) for poem_id in (excluded_first_ids or set())}
     entities = [poem["entity"] for poem in target_poems]
     if not entities:
         return []
 
-    def score_against_entities(text):
-        scores = get_similar_sentences(text, entities)
+    if entity_matcher is None:
+        with timings.measure(f"{timing_prefix}.semantic_index") if timings else _null_measure():
+            entity_matcher = SentenceMatcher(entities)
+
+    def best_entity(scores):
         best_idx, best_score = max(enumerate(scores), key=lambda item: item[1])
         return best_score, target_poems[best_idx]
 
     context = f"{caption} {location_str}".strip()
-    context_scores = get_similar_sentences(context, entities) if context else []
+    with timings.measure(f"{timing_prefix}.semantic_context") if timings else _null_measure():
+        context_scores = entity_matcher.score(context) if context else []
     image_scores_by_id = {
         str(target_poems[idx]["id"]): score
         for idx, score in enumerate(context_scores)
@@ -126,12 +182,18 @@ def select_top_poem_ids(location_str, caption, poems):
     seen = set()
 
     def add_tales(tales):
+        new_tales = []
         for tale in tales:
             normalized = " ".join(tale.lower().split())
             if normalized in seen:
                 continue
             seen.add(normalized)
-            score, poem = score_against_entities(tale)
+            new_tales.append(tale)
+
+        with timings.measure(f"{timing_prefix}.semantic_tales") if timings else _null_measure():
+            score_rows = entity_matcher.score_many(new_tales)
+        for tale, scores in zip(new_tales, score_rows):
+            score, poem = best_entity(scores)
             poem_id = str(poem["id"])
             scored_by_tale[tale] = (score, poem)
             existing = best_by_poem_id.get(poem_id)
@@ -142,14 +204,18 @@ def select_top_poem_ids(location_str, caption, poems):
         return sorted(scored_by_tale.items(), key=lambda x: x[1][0], reverse=True)
 
     for _ in range(initial_loops):
-        add_tales(parse_tales(call_ollama(build_initial_prompt(), temperature=0.7)))
+        with timings.measure(f"{timing_prefix}.ollama_initial") if timings else _null_measure():
+            raw_tales = call_ollama(build_initial_prompt(), temperature=0.7)
+        add_tales(parse_tales(raw_tales))
 
     for _ in range(improvement_loops):
         previous_best = sorted_tales()[0][1][0] if scored_by_tale else 0.0
         top_tales = sorted_tales()[:seed_size]
         if not top_tales:
             break
-        add_tales(parse_tales(call_ollama(build_improvement_prompt(top_tales), temperature=0.35)))
+        with timings.measure(f"{timing_prefix}.ollama_improve") if timings else _null_measure():
+            raw_tales = call_ollama(build_improvement_prompt(top_tales), temperature=0.35)
+        add_tales(parse_tales(raw_tales))
         current_best = sorted_tales()[0][1][0] if scored_by_tale else 0.0
         if current_best <= previous_best:
             break
@@ -161,7 +227,35 @@ def select_top_poem_ids(location_str, caption, poems):
         if poem_id not in best_by_poem_id:
             best_by_poem_id[poem_id] = (poem, score, context)
 
-    selected = sorted(best_by_poem_id.values(), key=lambda x: x[1], reverse=True)[:top_size]
+    ranked_candidates = sorted(best_by_poem_id.values(), key=lambda x: x[1], reverse=True)
+    first_eligible_idx = next(
+        (
+            idx
+            for idx, (poem, _, _) in enumerate(ranked_candidates)
+            if str(poem["id"]) not in excluded_first_ids
+        ),
+        None,
+    )
+    if first_eligible_idx is None:
+        for target_idx, _ in ranked_context:
+            poem = target_poems[target_idx]
+            poem_id = str(poem["id"])
+            if poem_id not in excluded_first_ids:
+                ranked_candidates.append((poem, context_scores[target_idx], context))
+                first_eligible_idx = len(ranked_candidates) - 1
+                break
+    if first_eligible_idx is None:
+        print("No poem is eligible for first place during the two-week cooldown window")
+        return []
+    if first_eligible_idx:
+        first_candidate = ranked_candidates.pop(first_eligible_idx)
+        ranked_candidates.insert(0, first_candidate)
+        print(
+            f"First-place cooldown promoted poem id={first_candidate[0]['id']} "
+            "ahead of recently first-ranked poems"
+        )
+
+    selected = ranked_candidates[:top_size]
     for idx, (poem, score, tale) in enumerate(selected, 1):
         image_score = image_scores_by_id.get(str(poem["id"]), score)
         print(
@@ -177,6 +271,11 @@ def select_top_poem_ids(location_str, caption, poems):
         }
         for poem, score, _ in selected
     ]
+
+
+@contextmanager
+def _null_measure():
+    yield
 
 
 def _clean_poem_text(poem_text):
@@ -208,21 +307,31 @@ def _format_excerpt_with_context(poem_text, excerpt):
     if not excerpt_lines:
         return ""
 
-    excerpt_keys = [_line_key(line) for line in excerpt_lines]
-    start_idx = None
-    for idx in range(0, len(poem_lines) - len(excerpt_lines) + 1):
-        candidate_keys = [_line_key(line) for line in poem_lines[idx : idx + len(excerpt_lines)]]
-        if candidate_keys == excerpt_keys:
-            start_idx = idx
-            break
+    poem_keys = [_line_key(line) for line in poem_lines]
+    selected_indices = []
+    search_from = 0
+    for excerpt_line in excerpt_lines:
+        excerpt_key = _line_key(excerpt_line)
+        matched_idx = None
+        for idx in range(search_from, len(poem_keys)):
+            if poem_keys[idx] == excerpt_key:
+                matched_idx = idx
+                break
+        if matched_idx is None:
+            return ""
+        selected_indices.append(matched_idx)
+        search_from = matched_idx + 1
 
-    formatted = list(excerpt_lines)
-    if start_idx is None:
-        return "\n".join(formatted)
-
-    if start_idx > 0:
-        formatted.insert(0, "...")
-    if start_idx + len(excerpt_lines) < len(poem_lines):
+    formatted = []
+    if selected_indices[0] > 0:
+        formatted.append("...")
+    previous_idx = None
+    for idx, line in zip(selected_indices, excerpt_lines):
+        if previous_idx is not None and idx > previous_idx + 1:
+            formatted.append("...")
+        formatted.append(line)
+        previous_idx = idx
+    if selected_indices[-1] + 1 < len(poem_lines):
         formatted.append("...")
     return "\n".join(formatted)
 
@@ -239,15 +348,86 @@ def select_poem_excerpt(poem, caption, tags, location):
         f"Poem entity/theme: {poem.get('entity', '')}\n\n"
         "From the poem below, select the exact excerpt that best represents the image. "
         "Use exactly 3 original poem lines if possible; otherwise use 2 lines, otherwise 1 line. "
-        "Prefer more lines when they still fit the image. Do not rewrite, translate, explain, add ellipses, or add punctuation. "
+        "Prefer more lines when they still fit the image. "
+        "Copy lines only from the poem text, in the poem's original language. "
+        "Do not return the poem entity/theme, translation, image description, rewritten text, explanations, ellipses, or added punctuation. "
         "Return only the excerpt.\n\n"
         f"Poem:\n{poem_text}"
     )
     excerpt = call_ollama(prompt, temperature=0.1)
     excerpt = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", excerpt.strip(), flags=re.MULTILINE).strip()
     excerpt = _clip_excerpt(excerpt, max_lines=3)
-    excerpt = excerpt or _clip_excerpt(poem_text, max_lines=3)
-    return _format_excerpt_with_context(poem_text, excerpt)
+    formatted_excerpt = _format_excerpt_with_context(poem_text, excerpt)
+    if formatted_excerpt:
+        return formatted_excerpt
+    return _format_excerpt_with_context(poem_text, _clip_excerpt(poem_text, max_lines=3))
+
+
+def select_poem_excerpts(poems, caption, tags, location):
+    """Select validated excerpts for several poems with one Ollama request."""
+    poems = [poem for poem in poems if _clean_poem_text(poem.get("text", ""))]
+    if not poems:
+        return {}
+
+    poem_sections = []
+    for poem in poems:
+        poem_sections.append(
+            f"<poem id=\"{poem['id']}\">\n"
+            f"Theme: {poem.get('entity', '')}\n"
+            f"{_clean_poem_text(poem.get('text', ''))}\n"
+            "</poem>"
+        )
+    prompt = (
+        f"Image caption: {caption}\n"
+        f"Image tags: {tags}\n"
+        f"Location: {location}\n\n"
+        "For each poem below, select the exact excerpt that best represents the image. "
+        "Use exactly 3 original poem lines if possible; otherwise use 2 lines, otherwise 1 line. "
+        "Copy lines only from that poem, in its original language. "
+        "Do not translate, rewrite, explain, or add punctuation. "
+        "Return only one JSON object whose keys are poem IDs and whose values are arrays of selected lines.\n\n"
+        + "\n\n".join(poem_sections)
+    )
+    raw_response = call_ollama(prompt, temperature=0.1)
+    cleaned_response = re.sub(
+        r"^```(?:json)?\s*|\s*```$", "", raw_response.strip(), flags=re.MULTILINE | re.IGNORECASE
+    ).strip()
+    cleaned_response = re.sub(
+        r"<think>.*?</think>", "", cleaned_response, flags=re.IGNORECASE | re.DOTALL
+    ).strip()
+    object_start = cleaned_response.find("{")
+    object_end = cleaned_response.rfind("}")
+    if object_start >= 0 and object_end > object_start:
+        cleaned_response = cleaned_response[object_start : object_end + 1]
+    try:
+        selected_lines = json.loads(cleaned_response)
+    except (json.JSONDecodeError, TypeError):
+        selected_lines = {}
+    if not isinstance(selected_lines, dict):
+        selected_lines = {}
+
+    excerpts = {}
+    fallback_ids = []
+    for poem in poems:
+        poem_id = str(poem["id"])
+        lines = selected_lines.get(poem_id, [])
+        if isinstance(lines, str):
+            lines = _excerpt_lines(lines)
+        if not isinstance(lines, list):
+            lines = []
+        candidate = "\n".join(str(line) for line in lines[:3])
+        excerpt = _format_excerpt_with_context(poem["text"], candidate)
+        if not excerpt:
+            fallback_ids.append(poem_id)
+            fallback = _clip_excerpt(_clean_poem_text(poem["text"]), max_lines=3)
+            excerpt = _format_excerpt_with_context(poem["text"], fallback)
+        excerpts[poem_id] = excerpt
+    if fallback_ids:
+        print(
+            f"Excerpt batch returned {len(fallback_ids)} invalid or missing selection(s); "
+            f"used original opening lines for IDs: {', '.join(fallback_ids)}"
+        )
+    return excerpts
 
 
 def _iter_image_paths(directory):
@@ -262,30 +442,26 @@ def _iter_image_paths(directory):
     )
 
 
-def _language_configs():
-    return [
-        {
-            "lang": "ua",
-            "label": "Ukrainian",
-            "poems": get_poems("ua"),
-            "location": lambda loc: translate_word(loc, "uk"),
-            "word_link": "Повний твір",
-        },
-        {
-            "lang": "ru",
-            "label": "Russian",
-            "poems": get_poems("ru"),
-            "location": lambda loc: translate_word(loc, "ru"),
-            "word_link": "Полное произведение",
-        },
-        {
-            "lang": "en",
-            "label": "English",
-            "poems": get_poems("en"),
-            "location": lambda loc: loc,
-            "word_link": "Full poem",
-        },
+def _language_configs(timings=None):
+    configs = []
+    language_details = [
+        ("ua", "Ukrainian", lambda loc: translate_word(loc, "uk"), "Повний твір"),
+        ("ru", "Russian", lambda loc: translate_word(loc, "ru"), "Полное произведение"),
+        ("en", "English", lambda loc: loc, "Full poem"),
     ]
+    for lang, label, location, word_link in language_details:
+        with timings.measure(f"startup.database.{lang}") if timings else _null_measure():
+            poems = get_poems(lang)
+        configs.append(
+            {
+                "lang": lang,
+                "label": label,
+                "poems": poems,
+                "location": location,
+                "word_link": word_link,
+            }
+        )
+    return configs
 
 
 def publish_poem(
@@ -310,9 +486,9 @@ def publish_poem(
     print()
 
     if just_print:
-        return
+        return False
 
-    asyncio.run(
+    return asyncio.run(
         send_telegram_message(
             poem["author"],
             excerpt,
@@ -329,51 +505,94 @@ def publish_poem(
 
 
 def process_directory(directory=None, just_print=True):
+    timings = TimingStats()
     images_dir = Path.home() / "images"
     directory = Path(directory) if directory is not None else images_dir
-    caption_backend = get_caption_backend()
-    configs = _language_configs()
+    with timings.measure("startup.caption_backend"):
+        caption_backend = get_caption_backend()
+    configs = _language_configs(timings)
     for cfg in configs:
         cfg["poems_by_id"] = _poems_by_id(cfg["poems"])
+        cfg["target_poems"] = _best_unique_entity_poems(cfg["poems"])
+        entities = [poem["entity"] for poem in cfg["target_poems"]]
+        with timings.measure(f"startup.semantic_index.{cfg['lang']}"):
+            cfg["entity_matcher"] = SentenceMatcher(entities) if entities else None
+        with timings.measure(f"startup.first_place_cooldown.{cfg['lang']}"):
+            cfg["recent_first_place_ids"] = get_recent_first_place_ids(
+                cfg["lang"], cooldown_days=14
+            )
 
-    for filepath in _iter_image_paths(directory):
-        filepath = str(filepath)
-        caption = caption_image(filepath, caption_backend)
-        tags_info = get_xmp_tags(filepath) or "No tags available"
-        coords = get_gps_coords(filepath)
-        if coords:
-            location = reverse_geocode(coords) or "Unknown"
-        else:
-            location = generate_location_from_tags(tags_info, caption)
+    try:
+        for filepath in _iter_image_paths(directory):
+            filepath = str(filepath)
+            with timings.measure("image.caption"):
+                caption = caption_image(filepath, caption_backend)
+            with timings.measure("image.metadata_tags"):
+                tags_info = get_xmp_tags(filepath) or "No tags available"
+            with timings.measure("image.gps"):
+                coords = get_gps_coords(filepath)
+            if coords:
+                with timings.measure("image.reverse_geocode"):
+                    location = reverse_geocode(coords) or "Unknown"
+            else:
+                with timings.measure("image.location_from_tags"):
+                    location = generate_location_from_tags(tags_info, caption)
 
-        print(f"\nImage: {Path(filepath).name}")
-        print(f"Caption: {caption}")
-        print(f"Tags: {tags_info}")
-        print(f"Location: {location}")
+            print(f"\nImage: {Path(filepath).name}")
+            print(f"Caption: {caption}")
+            print(f"Tags: {tags_info}")
+            print(f"Location: {location}")
 
-        for cfg in configs:
-            print(f"\n{cfg['label']} top poems:")
-            selected_poems = select_top_poem_ids(location, caption, cfg["poems"])
-            published = 0
-            for selected_poem in selected_poems:
-                poem_id = selected_poem["id"]
-                poem = cfg["poems_by_id"].get(str(poem_id))
-                if not poem:
-                    print(f"no poem found for id: {poem_id}")
-                    continue
-                excerpt = select_poem_excerpt(poem, caption, tags_info, location)
-                publish_poem(
-                    filepath,
-                    poem,
-                    excerpt,
-                    cfg["location"](location),
-                    cfg["word_link"],
-                    selected_poem["generated_tale_score"],
-                    selected_poem["image_score"],
-                    just_print=just_print,
-                )
-                published += 1
-            print(f"{cfg['label']} selected {published} poems")
+            for cfg in configs:
+                print(f"\n{cfg['label']} top poems:")
+                with timings.measure(f"language.{cfg['lang']}.selection"):
+                    selected_poems = select_top_poem_ids(
+                        location,
+                        caption,
+                        cfg["poems"],
+                        timings=timings,
+                        timing_prefix=f"language.{cfg['lang']}.selection",
+                        target_poems=cfg["target_poems"],
+                        entity_matcher=cfg["entity_matcher"],
+                        excluded_first_ids=cfg["recent_first_place_ids"],
+                    )
+                poems_to_publish = []
+                for selected_poem in selected_poems:
+                    poem_id = selected_poem["id"]
+                    poem = cfg["poems_by_id"].get(str(poem_id))
+                    if not poem:
+                        print(f"no poem found for id: {poem_id}")
+                        continue
+                    poems_to_publish.append((selected_poem, poem))
+
+                with timings.measure(f"language.{cfg['lang']}.excerpt"):
+                    excerpts = select_poem_excerpts(
+                        [poem for _, poem in poems_to_publish], caption, tags_info, location
+                    )
+                with timings.measure(f"language.{cfg['lang']}.translate_location"):
+                    translated_location = cfg["location"](location)
+                published = 0
+                for rank, (selected_poem, poem) in enumerate(poems_to_publish):
+                    excerpt = excerpts.get(str(poem["id"]), "")
+                    with timings.measure(f"language.{cfg['lang']}.publish"):
+                        published_successfully = publish_poem(
+                            filepath,
+                            poem,
+                            excerpt,
+                            translated_location,
+                            cfg["word_link"],
+                            selected_poem["generated_tale_score"],
+                            selected_poem["image_score"],
+                            just_print=just_print,
+                        )
+                    if rank == 0 and published_successfully:
+                        with timings.measure(f"language.{cfg['lang']}.record_first_place"):
+                            record_first_place(poem["id"], cfg["lang"])
+                        cfg["recent_first_place_ids"].add(str(poem["id"]))
+                    published += 1
+                print(f"{cfg['label']} selected {published} poems")
+    finally:
+        timings.report()
 
 
 if __name__ == "__main__":

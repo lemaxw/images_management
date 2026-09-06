@@ -124,6 +124,63 @@ def get_poems(dbname='ru'):
 
     return result
 
+
+def _ensure_first_place_usage_table(cursor):
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS poem_first_place_usage (
+            poem_id TEXT PRIMARY KEY REFERENCES poems(id) ON DELETE CASCADE,
+            first_used_at TIMESTAMP NOT NULL
+        );
+        """
+    )
+
+
+def get_recent_first_place_ids(dbname='ru', cooldown_days=14, now=None):
+    """Return poems that occupied first place during the cooldown window."""
+    conn = create_connection(dbname)
+    cursor = conn.cursor()
+    cutoff = (now or datetime.now()) - timedelta(days=cooldown_days)
+    try:
+        _ensure_first_place_usage_table(cursor)
+        cursor.execute(
+            "SELECT poem_id FROM poem_first_place_usage WHERE first_used_at > %s;",
+            (cutoff,),
+        )
+        result = {str(row[0]) for row in cursor.fetchall()}
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+    return result
+
+
+def record_first_place(poem_id, dbname='ru', used_at=None):
+    """Start or refresh a poem's first-place cooldown."""
+    conn = create_connection(dbname)
+    cursor = conn.cursor()
+    try:
+        _ensure_first_place_usage_table(cursor)
+        cursor.execute(
+            """
+            INSERT INTO poem_first_place_usage (poem_id, first_used_at)
+            VALUES (%s, %s)
+            ON CONFLICT (poem_id) DO UPDATE
+            SET first_used_at = EXCLUDED.first_used_at;
+            """,
+            (str(poem_id), used_at or datetime.now()),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
 def update_author(id, author, dbname = 'ru'):
     # Creating the connection
     conn = create_connection(dbname)

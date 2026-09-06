@@ -93,8 +93,9 @@ logging.basicConfig(
 )
 
 OLLAMA_URL = os.getenv("OLLAMA_URL") or os.getenv("IMAGE2JSON_URL") or "http://localhost:11434"
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL") or os.getenv("IMAGE2JSON_TEXT_MODEL") or "qwen3:14b"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL") or os.getenv("IMAGE2JSON_TEXT_MODEL") or "muse-glimmer-text:latest"
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT") or os.getenv("IMAGE2JSON_TIMEOUT") or "300")
+OLLAMA_KEEP_ALIVE = os.getenv("OLLAMA_KEEP_ALIVE", "10m")
 
 
 def call_ollama(
@@ -110,7 +111,7 @@ def call_ollama(
         "prompt": prompt,
         "stream": False,
         "think": False,
-        "keep_alive": 0,
+        "keep_alive": OLLAMA_KEEP_ALIVE,
         "options": {"temperature": temperature},
     }
     url = f"{OLLAMA_URL.rstrip('/')}/api/generate"
@@ -240,24 +241,80 @@ def reverse_geocode(coords):
         pass
     return None
 
+
+def _normalize_location_text(text):
+    return " ".join(str(text or "").strip(" .,:;-'\"").split())
+
+
+def _parse_location_response(raw_location):
+    """Extract a 'Place, Country' answer from an Ollama response."""
+    raw_location = str(raw_location or "").strip()
+    if not raw_location:
+        return "Unknown"
+
+    text = re.sub(r"<think>.*?</think>", "", raw_location, flags=re.IGNORECASE | re.DOTALL).strip()
+    if not text:
+        return "Unknown"
+
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        parsed = None
+    if isinstance(parsed, dict):
+        place = _normalize_location_text(
+            parsed.get("place") or parsed.get("city") or parsed.get("region")
+        )
+        country = _normalize_location_text(parsed.get("country"))
+        if place and country:
+            return f"{place}, {country}"
+
+    place_match = re.search(
+        r"\b(?:place|city|region)\s*[:=-]\s*([A-Za-z][A-Za-z .'-]+)",
+        text,
+        re.IGNORECASE,
+    )
+    country_match = re.search(r"\bcountry\s*[:=-]\s*([A-Za-z][A-Za-z .'-]+)", text, re.IGNORECASE)
+    if place_match and country_match:
+        place = _normalize_location_text(place_match.group(1).splitlines()[0])
+        country = _normalize_location_text(country_match.group(1).splitlines()[0])
+        if place and country:
+            return f"{place}, {country}"
+
+    if text.lower().startswith("unknown"):
+        return "Unknown"
+
+    candidates = []
+    for match in re.finditer(r"([A-Za-z][A-Za-z .'-]*?),\s*([A-Za-z][A-Za-z .'-]+)", text):
+        city = _normalize_location_text(match.group(1))
+        country = _normalize_location_text(match.group(2).splitlines()[0])
+        city = re.sub(r"^(?:the\s+)?(?:most\s+likely\s+)?(?:location|answer)\s+(?:is|:)\s+", "", city, flags=re.IGNORECASE)
+        if city and country:
+            candidates.append(f"{city}, {country}")
+    if candidates:
+        return min(candidates, key=len)
+
+    return "Unknown"
+
+
 def generate_location_from_tags(tags_info, caption=None):
-    """Ask the local Ollama text model to infer location from tags/description."""
-    caption_clause = f"\nImage caption hint: {caption}" if caption else ""
+    """Ask the local Ollama text model to infer a place from tags/description."""
+    caption_clause = f"Image caption, visual context only: {caption}\n" if caption else ""
     prompt = (
-        f"Based on these photo tags and description: {tags_info}, "
-        "identify the most likely city and country where the photo was taken in the format 'City, Country'. "
-        "If unknown, reply 'Unknown'."
-        f"{caption_clause}\nReturn only the city and country."
-    )    
-    raw_location = call_ollama(prompt)
-    first_line = raw_location.splitlines()[0].strip()
-    match = re.search(r"[A-Za-z][A-Za-z .'-]+,\s*[A-Za-z][A-Za-z .'-]+", first_line)
-    if match:
-        location = " ".join(match.group(0).split())
-    elif first_line.lower().startswith("unknown"):
-        location = "Unknown"
-    else:
-        location = "Unknown"
+        "Infer the most likely photo location.\n"
+        "Priority rules:\n"
+        "1. Photo metadata tags are the primary evidence.\n"
+        "2. The image caption is only visual context and must not override explicit place or country tags.\n"
+        "3. Tags may contain misspellings, transliterations, duplicates, hyphenated names, or mixed capitalization.\n\n"
+        f"Photo metadata tags: {tags_info}\n"
+        f"{caption_clause}\n"
+        "Find explicit place-like tags and country tags. A place may be a city, town, village, "
+        "region, national park, mountain area, landmark, or other named geographic area. "
+        "Convert place names to standard English spelling.\n"
+        "Return exactly one line as Place, Country. "
+        "If the tags do not contain a plausible named place and country, return exactly Unknown."
+    )
+    raw_location = call_ollama(prompt, temperature=0.0)
+    location = _parse_location_response(raw_location)
     logging.info(f"Generated location: {location} (raw response: {raw_location})")
         
     return location

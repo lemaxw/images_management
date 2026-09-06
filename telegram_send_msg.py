@@ -15,7 +15,6 @@ load_dotenv()
 
 token=os.getenv('TELEGRAM_ADMIN_TOKEN') 
 channel_id = os.getenv('TELEGRAM_CHANNEL_ID')
-print (f'token={token}, channel_id={channel_id}')
 
 bot = Bot(token=token)
 
@@ -42,6 +41,7 @@ async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,enti
             found_caption=True
     
     max_retries = 5
+    sent = False
     for i in range(max_retries):
         try:
             img = resize_image(photo_path_or_url, 10000)
@@ -49,6 +49,7 @@ async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,enti
             img.save(photo_data, format='JPEG')
             photo_data.seek(0)
             await bot.send_photo(chat_id=channel_id, photo=photo_data, caption=caption, parse_mode=types.ParseMode.HTML)
+            sent = True
             break
         except CantParseEntities as e:
             print(f"Error while sending message: {str(e)}")
@@ -68,3 +69,4 @@ async def send_telegram_message(poet,poem,location,photo_path_or_url,url,id,enti
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
         await bot.close()
+    return sent
